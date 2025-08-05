@@ -1,0 +1,152 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: caesari
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: vm-orchestrator
+service: vm-orchestrator-api
+
+plugins:
+  - serverless-dotenv-plugin
+
+custom:
+  dotenv:
+    exclude:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  httpApi:
+    cors:
+      allowedOrigins:
+        - "*"
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+
+  region: "us-east-1"
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:Scan"
+            - "dynamodb:Query"
+            - "dynamodb:PutItem"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+            - "dynamodb:GetItem"
+          Resource:
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.VMS_TABLE}"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.VMS_TABLE}/index/*"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.COMMANDS_TABLE}"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.COMMANDS_TABLE}/index/*"
+  environment:
+    VMS_TABLE: ${env:AWS_DYNAMODB_VMS_TABLE, "vm-orchestrator-vms"}
+    COMMANDS_TABLE: ${env:AWS_DYNAMODB_COMMANDS_TABLE, "vm-orchestrator-commands"}
+
+functions:
+  # VM Management API
+  vmsApi:
+    handler: handlers/vms.api
+    events:
+      - httpApi:
+          path: /api/vms
+          method: GET
+      - httpApi:
+          path: /api/vms
+          method: POST
+      - httpApi:
+          path: /api/vms/{id}
+          method: GET
+      - httpApi:
+          path: /api/vms/{id}
+          method: PUT
+      - httpApi:
+          path: /api/vms/{id}
+          method: DELETE
+
+  # Commands Management API
+  commandsApi:
+    handler: handlers/commands.api
+    events:
+      - httpApi:
+          path: /api/vms/{vmId}/commands
+          method: GET
+      - httpApi:
+          path: /api/vms/{vmId}/commands
+          method: POST
+      - httpApi:
+          path: /api/commands/{id}
+          method: GET
+      - httpApi:
+          path: /api/commands/{id}
+          method: PUT
+      - httpApi:
+          path: /api/commands/{id}
+          method: DELETE
+
+resources:
+  Resources:
+    # VMs Table
+    VmsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.VMS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: name
+            AttributeType: S
+          - AttributeName: environment
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: NameEnvironmentIndex
+            KeySchema:
+              - AttributeName: name
+                KeyType: HASH
+              - AttributeName: environment
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    # Commands Table
+    CommandsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.COMMANDS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: vmId
+            AttributeType: S
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: VmIdIndex
+            KeySchema:
+              - AttributeName: vmId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: VmIdNameIndex
+            KeySchema:
+              - AttributeName: vmId
+                KeyType: HASH
+              - AttributeName: name
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST

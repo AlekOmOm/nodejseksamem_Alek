@@ -1,0 +1,8 @@
+# Serverless framework specific
+.serverless/
+
+# Node.js dependencies
+node_modules/
+
+# Environment variables
+.env

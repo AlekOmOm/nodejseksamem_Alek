@@ -1,0 +1,22 @@
+# node
+!package.json
+!package-lock.json
+
+# backend
+
+# frontend
+
+# db
+!db/*.db
+
+# test
+!.test/
+
+# env
+!.env.sample
+
+
+frontend/src/dist/
+!serverless/
+
+!tmp/

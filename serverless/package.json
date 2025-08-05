@@ -1,0 +1,20 @@
+{
+  "name": "vm-orchestrator-serverless",
+  "version": "1.0.0",
+  "description": "Serverless functions for VM orchestrator",
+  "type": "module",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "remove": "serverless remove",
+    "logs": "serverless logs -f",
+    "invoke": "serverless invoke -f"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/util-dynamodb": "^3.0.0"
+  },
+  "devDependencies": {
+    "serverless": "^3.0.0",
+    "serverless-dotenv-plugin": "^6.0.0"
+  }
+}
