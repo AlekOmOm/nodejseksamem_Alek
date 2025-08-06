@@ -12,6 +12,15 @@ export default class UserModel {
       return result.rows[0];
    }
 
+   async findById(id) {
+      const query = {
+         text: "SELECT id, email, role, created_at FROM users WHERE id = $1",
+         values: [id],
+      };
+      const result = await this.db.query(query);
+      return result.rows[0];
+   }
+
    async create(email, hashedPassword, role = "dev") {
       const query = {
          text: "INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email, role, created_at",

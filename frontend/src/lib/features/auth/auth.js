@@ -1,5 +1,10 @@
 import { getService } from "$lib/core/ServiceContainer";
-import { setUser, logout, getIsAuthenticated, getUser } from "$lib/state/auth.state.svelte.js";
+import {
+   setUser,
+   logout,
+   getIsAuthenticated,
+   getUser,
+} from "$lib/state/auth.state.svelte.js";
 
 /**
  * Auth Service class
@@ -8,69 +13,83 @@ import { setUser, logout, getIsAuthenticated, getUser } from "$lib/state/auth.st
  * Handles user authentication and session management.
  */
 export class AuthService {
-  ENDPOINT = "/api/auth";
+   ENDPOINT = "/api/auth";
 
-  constructor(apiClient) {
-    this.api = apiClient;
-  }
+   constructor(apiClient) {
+      this.api = apiClient;
+   }
 
-  async register(userData) {
-    console.log("🔍 [AuthService] Register called with:", userData);
-    
-    const response = await this.api.post(`${this.ENDPOINT}/register`, userData);
-    console.log("🔍 [AuthService] API response:", response);
-    
-    if (response.status === 201) {
-      console.log("✅ [AuthService] Setting user:", response.data);
+   async validateSession() {
+      try {
+         const response = await this.api.get(`${this.ENDPOINT}/me`);
+         if (response.status === 200) {
+            // Update user data in case it changed
+            setUser(response.data);
+            return true;
+         }
+         console.log("response", response);
+         return false;
+      } catch (error) {
+         console.log(
+            "🔐 [AuthService] Session validation failed:",
+            error.message
+         );
+         return false;
+      }
+   }
+
+   async register(userData) {
+      const response = await this.api.post(
+         `${this.ENDPOINT}/register`,
+         userData
+      );
+
       setUser(response.data);
-    }
-    return response;
-  }
+      return response;
+   }
 
-  async login(email, password) {
-    const response = await this.api.post(`${this.ENDPOINT}/login`, {
-      email,
-      password,
-    });
-    if (response.status === 200) {
-      setUser(response.data);
-    }
-    return response;
-  }
+   async login(email, password) {
+      const response = await this.api.post(`${this.ENDPOINT}/login`, {
+         email,
+         password,
+      });
+      setUser(response);
+      return response;
+   }
 
-  async logout() {
-    const response = await this.api.post(`${this.ENDPOINT}/logout`);
-    if (response.status === 200) {
-      logout();
-    }
-    return response;
-  }
+   async logout() {
+      const response = await this.api.post(`${this.ENDPOINT}/logout`);
+      if (response.status === 200) {
+         logout();
+      }
+      return response;
+   }
 
-  // GDPR delete user
-  async deleteUser(id) {
-    if (!getIsAuthenticated()) {
-      throw new Error("User not authenticated");
-    }
+   // GDPR delete user
+   async deleteUser(id) {
+      if (!getIsAuthenticated()) {
+         throw new Error("User not authenticated");
+      }
 
-    const response = await this.api.delete(`${this.ENDPOINT}/${id}`);
-    if (response.status === 200) {
-      logout();
-    }
-    return response;
-  }
+      const response = await this.api.delete(`${this.ENDPOINT}/${id}`);
+      if (response.status === 200) {
+         logout();
+      }
+      return response;
+   }
 
-  // Check current auth status
-  isAuthenticated() {
-    return getIsAuthenticated();
-  }
+   // Check current auth status
+   isAuthenticated() {
+      return getIsAuthenticated();
+   }
 
-  // Get current user
-  getCurrentUser() {
-    return getUser();
-  }
+   // Get current user
+   getCurrentUser() {
+      return getUser();
+   }
 }
 
 // Factory function for service container
 export function createAuthService(apiClient) {
-  return new AuthService(apiClient);
+   return new AuthService(apiClient);
 }

@@ -7,7 +7,6 @@
   import Grid from '$lib/components/lib/ui/Grid.svelte';
   import { getVMStore } from '$lib/state/stores.state.svelte.js';
   import { getRecentVMs, getSelectedVM } from '$lib/state/ui.state.svelte.js';
-  import { debug } from '$lib/debug.js';
 
   const selectedVM = $derived(getSelectedVM());
   const vmStore = $derived(getVMStore());
@@ -18,11 +17,8 @@
     if (selectedVM !== prevSelectedVM) {
       prevSelectedVM = selectedVM;
       recentVMs = getRecentVMs(vms);
-      debug("VMSidebar", "$effect", "selectedVM", selectedVM);
     }
   });
-
-  debug("VMSidebar", "vms", "sidebar", vms.length);
 
   let recentVMs = $derived(getRecentVMs(vms));
 

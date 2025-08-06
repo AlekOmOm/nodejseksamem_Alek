@@ -1,81 +1,94 @@
 import express from "express";
 import Service from "./service.js";
 import UserModel from "./UserModel.js";
+import { isUserAuthenticated } from "./authUtils.js";
 import {
-  sendSuccess,
-  sendCreated,
-  sendUnauthorized,
-  sendConflict,
-  sendUnprocessableEntity,
-  sendInternalServerError,
+   sendSuccess,
+   sendCreated,
+   sendUnauthorized,
+   sendConflict,
+   sendUnprocessableEntity,
+   sendInternalServerError,
 } from "../../shared/utils/responseHelpers.js";
 
 export function createAuthRouter(db) {
-  const router = express.Router();
-  const repo = new UserModel(db);
-  const service = new Service(repo);
+   const router = express.Router();
+   const repo = new UserModel(db);
+   const service = new Service(repo);
 
-  router.post("/register", async (req, res) => {
-    console.log("🔍 [Auth] Register request received:");
-    console.log("  - Body:", JSON.stringify(req.body, null, 2));
-    console.log("  - Headers:", req.headers['content-type']);
-    
-    try {
-      const userData = req.body;
-      console.log("🔍 [Auth] Parsed userData:", userData);
-      
-      const newUser = await service.register(userData);
-      console.log("✅ [Auth] User registered successfully:", newUser.email);
-      return sendCreated(res, newUser);
-    } catch (error) {
-      console.log("❌ [Auth] Registration error:", error.message);
-      console.log("❌ [Auth] Error name:", error.name);
-      
-      if (error.message === "Email already registered") {
-        return sendConflict(res, "Email already registered");
-      }
-      if (error.name === "ValiError") {
-        console.log("❌ [Auth] Validation issues:", error.issues);
-        const validationMessage = error.issues
-          .map((issue) => issue.message)
-          .join(", ");
-        return sendUnprocessableEntity(res, validationMessage);
-      }
-      return sendInternalServerError(res, error.message);
-    }
-  });
+   router.post("/register", async (req, res) => {
+      console.log("🔍 [Auth] Register request received:");
+      console.log("  - Body:", JSON.stringify(req.body, null, 2));
+      console.log("  - Headers:", req.headers["content-type"]);
 
-  router.post("/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      const user = await service.login(email, password);
+      try {
+         const userData = req.body;
+         console.log("🔍 [Auth] Parsed userData:", userData);
 
-      req.session.userId = user.id;
-      req.session.role = user.role;
-      return sendSuccess(res, user);
-    } catch (error) {
-      if (error.message === "Invalid credentials") {
-        return sendUnauthorized(res, "Invalid credentials");
-      }
-      if (error.name === "ValiError") {
-        const validationMessage = error.issues
-          .map((issue) => issue.message)
-          .join(", ");
-        return sendUnprocessableEntity(res, validationMessage);
-      }
-      return sendInternalServerError(res, error.message);
-    }
-  });
+         const newUser = await service.register(userData);
+         console.log("✅ [Auth] User registered successfully:", newUser.email);
+         return sendCreated(res, newUser);
+      } catch (error) {
+         console.log("❌ [Auth] Registration error:", error.message);
+         console.log("❌ [Auth] Error name:", error.name);
 
-  router.post("/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return sendInternalServerError(res, "Failed to logout");
+         if (error.message === "Email already registered") {
+            return sendConflict(res, "Email already registered");
+         }
+         if (error.name === "ValiError") {
+            console.log("❌ [Auth] Validation issues:", error.issues);
+            const validationMessage = error.issues
+               .map((issue) => issue.message)
+               .join(", ");
+            return sendUnprocessableEntity(res, validationMessage);
+         }
+         return sendInternalServerError(res, error.message);
       }
-      res.clearCookie("connect.sid");
-      return sendSuccess(res, { message: "Logged out successfully" });
-    });
-  });
+   });
 
-  return router;
+   router.post("/login", async (req, res) => {
+      try {
+         const { email, password } = req.body;
+         const user = await service.login(email, password);
+
+         req.session.userId = user.id;
+         req.session.role = user.role;
+         return sendSuccess(res, user);
+      } catch (error) {
+         if (error.message === "Invalid credentials") {
+            return sendUnauthorized(res, "Invalid credentials");
+         }
+         if (error.name === "ValiError") {
+            const validationMessage = error.issues
+               .map((issue) => issue.message)
+               .join(", ");
+            return sendUnprocessableEntity(res, validationMessage);
+         }
+         return sendInternalServerError(res, error.message);
+      }
+   });
+
+   router.post("/logout", (req, res) => {
+      req.session.destroy((err) => {
+         if (err) {
+            return sendInternalServerError(res, "Failed to logout");
+         }
+         res.clearCookie("connect.sid");
+         return sendSuccess(res, { message: "Logged out successfully" });
+      });
+   });
+
+   router.get("/me", isUserAuthenticated, async (req, res) => {
+      try {
+         const user = await service.getCurrentUser(req.user.id);
+         return sendSuccess(res, user);
+      } catch (error) {
+         if (error.message === "User not found") {
+            return sendUnauthorized(res, "Invalid session");
+         }
+         return sendInternalServerError(res, error.message);
+      }
+   });
+
+   return router;
 }

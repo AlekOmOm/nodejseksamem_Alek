@@ -17,7 +17,7 @@
   $effect(() => {
     if (selectedVM !== prevSelectedVM) {
       prevSelectedVM = selectedVM;
-      vmCommands = getSelectedVMCommands();
+  vmCommands = getSelectedVMCommands();
     }
   });
 

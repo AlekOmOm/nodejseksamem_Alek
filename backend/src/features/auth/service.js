@@ -44,4 +44,12 @@ export default class AuthService {
       delete user.password_hash;
       return user;
    }
+
+   async getCurrentUser(userId) {
+      const user = await this.repo.findById(userId);
+      if (!user) {
+         throw new Error("User not found");
+      }
+      return user;
+   }
 }

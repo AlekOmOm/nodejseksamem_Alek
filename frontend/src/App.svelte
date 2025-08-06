@@ -41,8 +41,7 @@
       const loadedVMs = vmStore.getVMs();
       await initializedUIState(loadedVMs);
       await selectVM(loadedVMs[0]);
-      
-      console.log("✅ [App.svelte] Full initialization complete");
+
     } catch (error) {
       console.error("❌ [App.svelte] Full initialization failed:", error);
     }
