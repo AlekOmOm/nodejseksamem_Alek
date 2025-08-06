@@ -1,8 +1,9 @@
 # VM Orchestrator – MVP
 
-**tl;dr** A minimal DevOps cockpit that lets you execute make targets and tail logs across local and remote VMs with real-time streaming and audit trail.
+**tl;dr** A minimal DevOps cockpit that lets you execute 'make <target>' and tail logs across local and remote VMs with real-time streaming and audit trail.
 
 ## Features
+
 - Real-time log streaming over WebSocket
 - Terminal spawn for interactive targets (`make vm create`, `make ssh`, …)
 - Process streaming for non-interactive targets (`make status`, `make build`, …)
@@ -14,9 +15,26 @@
 - **NEW**: Job and Logs caching with in Postgresql for improved performance
 
 ## Tech stack
+
 - Frontend: Svelte + Vite + Socket.io-client
 - Backend: Node.js (Express) + Socket.io
 - Database: Postgres 16 (job history) + DynamoDB (VM/command config)
+
+  1. Postgres (hosted server)
+
+  - for:
+    - write concurrency
+    - caching (jobs & logs)
+    - security
+      - full control of user data -> GDPR complient _deletion_ of users
+
+  2. DynamoDB (serverless)
+
+  - for:
+    - scalability of long persisted entities
+      - `vms` and `commands` need longer persistance
+      -
+
 - Cloud: AWS Lambda + API Gateway (serverless functions)
 - Container orchestration: Docker Compose
 
@@ -29,9 +47,10 @@ make setup      # build containers, install deps, initialise DB
 make dev        # start backend, frontend & postgres
 ```
 
-Application endpoints  
-- Frontend http://localhost:5174  
-- Backend  http://localhost:3000  
+Application endpoints
+
+- Frontend http://localhost:5174
+- Backend http://localhost:3000
 
 Stop everything:
 
@@ -51,7 +70,7 @@ Run automated validation:
 make validate
 ```
 
-## Serverless Setup 
+## Serverless Setup
 
 For enhanced VM and command management, deploy the serverless functions:
 
@@ -68,6 +87,7 @@ echo "SERVERLESS_API_URL=https://your-api-id.execute-api.region.amazonaws.com" >
 ```
 
 The serverless functions provide:
+
 - VM configuration CRUD operations
 - Command management per VM
 - Job caching for improved performance
@@ -75,6 +95,7 @@ The serverless functions provide:
 See `serverless/README.md` for detailed API documentation.
 
 ## Project layout
+
 ```
 backend      src/server.js
 frontend     frontend/src/*
@@ -85,6 +106,7 @@ scripts      Deployment and utility scripts
 ```
 
 ## How it works
+
 1. The frontend opens a WebSocket to the backend.
 2. When you press a command button the browser emits `execute-command`.
 3. The backend spawns a local process or SSH command, streams stdout/stderr back through the socket and persists every chunk to Postgres.
@@ -92,7 +114,9 @@ scripts      Deployment and utility scripts
 5. On page load the frontend fetches the last 10 jobs from `/api/jobs` for history replay.
 
 ## MVP scope
+
 This repository intentionally ships only the core pipeline needed for the exam:
+
 - single-node Docker Compose stack
 - hard-coded demo commands in `src/server.js`
 - basic Svelte UI with three example buttons
