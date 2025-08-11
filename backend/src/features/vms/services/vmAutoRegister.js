@@ -1,6 +1,6 @@
-import { SSHManager } from "./ssh-manager.js";
-import { serverlessAPI } from "../../clients/serverless-api-client.js";
-import { checkVM } from "./vmAuth.js";
+import { SSHManager } from "./SSHManager.js";
+import { VMsRepository } from "../VMsRepository.js";
+import { checkVM } from "../vmUtils.js";
 
 // cache of last refresh
 let cache = {
@@ -8,28 +8,29 @@ let cache = {
   vms: [],
 };
 const CACHE_TTL = 10 * 60 * 1000; // 10 min
+const repo = new VMsRepository();
 
 /**
  * Ensure all SSH hosts are present in /api/vms table
  */
-export async function syncSshHostsToVms(force = false) {
+export async function autoRegisterVms(force = false) {
+  console.log("[vmAutoRegister] autoRegisterVms()");
+  console.log("--------------------------------");
+
   let backendVMs = null;
   if (!force && Date.now() - cache.timestamp < CACHE_TTL) {
-    console.log("📋 SSH host sync skipped - cache still valid");
     backendVMs = cache.vms;
   }
 
   try {
-    console.log("🔄 Syncing SSH hosts to VMs database...");
-
     const hosts = SSHManager.getAllHosts();
+    console.log("[vmAutoRegister] hosts:", hosts);
+    console.log("--------------------------------");
+
     if (backendVMs === null) {
-      backendVMs = await serverlessAPI.getVMs();
+      backendVMs = await repo.getVMs();
       cache.vms = backendVMs;
       cache.timestamp = Date.now();
-      console.log(" - cache updated");
-      console.log(" -- vms:", backendVMs.length);
-      console.log(" -- timestamp:", cache.timestamp);
     }
 
     const existingAliases = new Set(backendVMs.map((v) => v.alias || v.name));
@@ -51,7 +52,7 @@ export async function syncSshHostsToVms(force = false) {
         };
 
         try {
-          const newVM = await serverlessAPI.createVM(payload);
+          const newVM = await repo.createVM(payload);
           syncedCount++;
           vms.push(newVM);
         } catch (err) {
@@ -67,15 +68,8 @@ export async function syncSshHostsToVms(force = false) {
     }
 
     cache.timestamp = Date.now();
-    console.log(
-      `✅ SSH host sync complete - ${syncedCount} new VMs registered from ${hosts.length} SSH hosts`
-    );
-    console.log(" - check:");
-    console.log(" -- vms:", vms.length);
-    console.log(" -- hosts:", hosts.length);
-    const vmsAuthorized = vms.filter(checkVM);
-    console.log(" -- vmsAuthorized:", vmsAuthorized.length);
-    return vmsAuthorized;
+
+    return vms.filter(checkVM);
   } catch (err) {
     console.error("❌ SSH host sync failed:", err.message);
     throw err;

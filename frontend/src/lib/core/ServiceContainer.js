@@ -139,9 +139,6 @@ export class ServiceContainer {
    */
   async initializeAuth() {
     if (this.authInitialized) return;
-
-    console.log("🔧 [ServiceContainer] Initializing auth services...");
-
     this.registerSingleton("apiClient", () => new ApiClient());
     this.registerSingleton(
       "authService",
@@ -149,7 +146,6 @@ export class ServiceContainer {
     );
 
     this.authInitialized = true;
-    console.log("✅ [ServiceContainer] Auth services initialized");
   }
 
   /**
@@ -157,11 +153,8 @@ export class ServiceContainer {
    */
   async initializeFull() {
     if (this.initialized) {
-      console.log("⚠️ Service container already initialized");
       return;
     }
-
-    console.log("🚀 Initializing service container...");
 
     try {
       // Initialize core clients

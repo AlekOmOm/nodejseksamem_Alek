@@ -1,6 +1,5 @@
 import express from "express";
 import AuthService from "./AuthService.js";
-import AuthRepository from "./AuthRepository.js";
 import isAuthenticated from "../../shared/middleware/authorization.js";
 import {
   sendSuccess,
@@ -11,10 +10,9 @@ import {
   sendInternalServerError,
 } from "../../shared/utils/responseHelpers.js";
 
-export function createAuthRouter(db) {
+export function createAuthRouter() {
   const router = express.Router();
-  const repo = new AuthRepository(db);
-  const service = new AuthService(repo);
+  const service = new AuthService();
 
   router.post("/register", async (req, res) => {
     console.log("🔍 [Auth] Register request received:");

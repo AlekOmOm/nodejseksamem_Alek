@@ -6,9 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "test": "node tests/commands.test.js",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "nodemon src/server.js",
+    "dev": "nodemon src/server.js",
     "e2e": "node .test/mvp-validation.js",
     "dev:serverless": "cd serverless && npm run deploy",
     "test:mvp-frontend": "node .test/mvp/frontend-validation.js"

@@ -73,7 +73,7 @@ export async function initializeStoresData() {
     if (_vmStore) {
       loadPromises.push(
         _vmStore
-          .initialize()
+          .loadVMs()
           .then((vms) => {
             if (vms) setVms(vms);
             return vms;

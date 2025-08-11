@@ -1,151 +1,285 @@
 /**
- * VM Store - Direct instance implementation
+ * VM Store - Cache-first with backend sync pattern
  *
- * This store is now managed through the ServiceContainer and accessed
- * via stores.state.svelte.js. This file provides the store factory
- * for the new dependency injection system.
+ * CRUD Pattern:
+ * - READ: Cache-first, API fallback (cache → API if not found)
+ * - CREATE/UPDATE/DELETE: API-first, then update cache (API → cache sync)
+ * 
+ * Follows store-loading.md pattern for global data initialization.
  */
 
 import { createCRUDStore } from "$lib/core/stores/crudStore.js";
-import { getCommandStore } from "$lib/state/stores.state.svelte.js";
 
 const initialState = {
   vms: [],
   loading: false,
   error: null,
+  initialized: false,
 };
 
 export function createVMStore(dependencies) {
   const { vmService } = dependencies;
   const store = createCRUDStore(initialState);
-  let initialized = false;
 
   return {
     subscribe: store.subscribe,
     getState: store.getState,
 
-    async initialize() {
-      if (initialized) {
-        return store.getState().vms;
+    // ═══════════════════════════════════════════════════════════
+    // GLOBAL DATA LOADING (called by initializeStoresData)
+    // ═══════════════════════════════════════════════════════════
+
+    async loadVMs(force = false) {
+      const state = store.getState();
+      
+      // Skip if already loaded and not forced
+      if (state.initialized && !force && state.vms.length > 0) {
+        return state.vms;
       }
 
-      store.update((s) => ({ ...s, loading: true }));
+      // Skip if currently loading
+      if (state.loading) {
+        return state.vms;
+      }
+
+      store.update((s) => ({ ...s, loading: true, error: null }));
+      
       try {
-        const vms = await vmService.initialize();
-        store.set({ vms: vms || [], loading: false, error: null });
-        initialized = true;
+        const vms = await vmService.getVMs();
+        
+        store.set({ 
+          vms: vms || [], 
+          loading: false, 
+          error: null,
+          initialized: true 
+        });
+        
         return vms;
       } catch (error) {
-        console.error("Failed to initialize VMStore:", error);
-        store.update((s) => ({ ...s, loading: false, error: error.message }));
+        console.error("Failed to load VMs:", error);
+        store.update((s) => ({ 
+          ...s, 
+          loading: false, 
+          error: error.message 
+        }));
         throw error;
       }
     },
 
-    // Direct state access for runes
+    // ═══════════════════════════════════════════════════════════
+    // READ OPERATIONS (Cache-first, API fallback)
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Get all VMs from cache (synchronous)
+     */
+    getVMs() {
+      return store.getState().vms;
+    },
+
+    /**
+     * Get VM by ID - cache first, API fallback
+     */
+    async getVMById(vmId, caller = "unknown") {
+      if (!vmId) return null;
+      
+      // 1. Check cache first
+      const cachedVM = store.getState().vms.find(vm => vm.id === vmId);
+      if (cachedVM) {
+        return cachedVM;
+      }
+      
+      // 2. Not in cache - fetch from API
+      try {
+        const vm = await vmService.getVM(vmId, caller);
+        if (vm) {
+          // Add to cache for next time
+          this._addToCache(vm);
+        }
+        return vm;
+      } catch (error) {
+        console.error(`Failed to get VM by ID ${vmId}:`, error);
+        return null;
+      }
+    },
+
+    /**
+     * Get VM by alias - cache first, API fallback
+     */
     async getVMByAlias(alias, caller = "unknown") {
       if (!alias) return null;
 
-      // First check if VM exists in loaded VMs
-      let vm = store.getState().vms?.find((vm) => vm.alias === alias);
-      if (vm && vm.id) {
+      // 1. Check cache first
+      const cachedVM = store.getState().vms.find(vm => vm.alias === alias);
+      if (cachedVM) {
+        return cachedVM;
+      }
+
+      // 2. Not in cache - fetch from API
+      try {
+        const vm = await vmService.getVMByAlias(alias, caller);
+        if (vm) {
+          // Add to cache for next time
+          this._addToCache(vm);
+        }
         return vm;
+      } catch (error) {
+        console.error(`Failed to get VM by alias ${alias}:`, error);
+        return null;
       }
-
-      // VM not in store, need to ensure registration
-      vm = await vmService.getVMByAlias(alias, caller);
-      this.updateVMs(vm);
-
-      return vm;
     },
 
     /**
-     * Get a VM by its UUID
-     *
-     * @param {string} uuid - The UUID of the VM
-     * @param {string} caller (optional) - The caller of the function
-     * @returns {Promise<Object>} The VM object
-     */
-    async getVMById(uuid, caller = "unknown") {
-      if (!uuid) return null;
-      let vm = store.getState().vms?.find((vm) => vm.id === uuid) || null;
-      if (!vm) {
-        vm = await vmService.getVM(uuid, caller);
-        this.updateVMs(vm);
-      }
-      return vm;
-    },
-
-    /**
-     * Resolve a VM from an identifier (alias or UUID)
-     *
-     * @param {string} identifier - The alias or UUID of the VM
-     * @param {string} caller (optional) - The caller of the function
-     * @returns {Promise<Object>} The resolved VM object
+     * Resolve VM by identifier (alias or UUID) - cache first, API fallback
      */
     async resolveVM(identifier, caller = "unknown") {
       if (!identifier) return null;
 
-      // First try to find in loaded VMs by alias
-      let vm = store.getState().vms?.find((vm) => vm.alias === identifier);
-      if (vm) {
-        return vm;
-      }
+      // 1. Try cache by alias
+      let vm = store.getState().vms.find(vm => vm.alias === identifier);
+      if (vm) return vm;
 
-      // Try to find by ID if it looks like a UUID
+      // 2. Try cache by ID (if looks like UUID)
       if (identifier.length > 10 && identifier.includes("-")) {
-        vm = store.getState().vms?.find((vm) => vm.id === identifier);
-        if (vm) {
-          return vm;
-        }
+        vm = store.getState().vms.find(vm => vm.id === identifier);
+        if (vm) return vm;
       }
 
-      // Not found in store, fall back to service resolution
-      vm = await this.getVMByAlias(identifier, caller);
-      return vm;
-    },
-    getVMs() {
-      return store.getState().vms;
-    },
-    getError() {
-      return store.getState().error;
+      // 3. Not found in cache - try API by alias
+      return await this.getVMByAlias(identifier, caller);
     },
 
-    // Methods
-    async loadVMs() {
-      store.update((state) => ({ ...state, loading: true, error: null }));
+    // ═══════════════════════════════════════════════════════════
+    // CREATE/UPDATE/DELETE OPERATIONS (API-first, cache sync)
+    // ═══════════════════════════════════════════════════════════
 
+    /**
+     * Create VM - API first, then add to cache
+     */
+    async createVM(vmData) {
       try {
-        const vms = await vmService.getVMs();
-        getCommandStore().loadVMsCommands(vms, "loadVMs");
-
-        store.update((state) => ({
-          vms,
-          loading: false,
-          error: null,
-        }));
-
-        return vms;
-      } catch (error) {
-        console.error("Failed to load VMs:", error);
+        // 1. Create via API
+        const newVM = await vmService.createVM(vmData);
+        
+        // 2. Add to local cache
         store.update((state) => ({
           ...state,
-          loading: false,
-          error: error.message,
+          vms: [...state.vms, newVM],
+          error: null
+        }));
+        
+        return newVM;
+      } catch (error) {
+        console.error('Failed to create VM:', error);
+        store.update((state) => ({
+          ...state,
+          error: error.message
         }));
         throw error;
       }
     },
-    updateVMs(vm) {
-      if (!vm) return;
-      if (vm === null) return;
-      store.update((state) => {
-        const vms = state.vms.map((v) => (v.id === vm.id ? vm : v));
-        return {
+
+    /**
+     * Update VM - API first, then update cache
+     */
+    async updateVM(vmId, vmData) {
+      try {
+        // 1. Update via API
+        const updatedVM = await vmService.updateVM(vmId, vmData);
+        
+        // 2. Update local cache
+        store.update((state) => ({
           ...state,
-          vms,
-        };
+          vms: state.vms.map(vm => vm.id === vmId ? updatedVM : vm),
+          error: null
+        }));
+        
+        return updatedVM;
+      } catch (error) {
+        console.error('Failed to update VM:', error);
+        store.update((state) => ({
+          ...state,
+          error: error.message
+        }));
+        throw error;
+      }
+    },
+
+    /**
+     * Delete VM - API first, then remove from cache
+     */
+    async deleteVM(vmId) {
+      try {
+        // 1. Delete via API
+        await vmService.deleteVM(vmId);
+        
+        // 2. Remove from local cache
+        store.update((state) => ({
+          ...state,
+          vms: state.vms.filter(vm => vm.id !== vmId),
+          error: null
+        }));
+        
+        return true;
+      } catch (error) {
+        console.error('Failed to delete VM:', error);
+        store.update((state) => ({
+          ...state,
+          error: error.message
+        }));
+        throw error;
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // STATE ACCESSORS (for Svelte 5 runes)
+    // ═══════════════════════════════════════════════════════════
+
+    getError() {
+      return store.getState().error;
+    },
+
+    getLoading() {
+      return store.getState().loading;
+    },
+
+    isInitialized() {
+      return store.getState().initialized;
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // INTERNAL HELPERS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Internal method to add VM to cache without API call
+     */
+    _addToCache(vm) {
+      if (!vm || !vm.id) return;
+      
+      store.update((state) => {
+        const exists = state.vms.find(v => v.id === vm.id);
+        if (exists) {
+          // Update existing
+          const vms = state.vms.map(v => v.id === vm.id ? vm : v);
+          return { ...state, vms };
+        } else {
+          // Add new
+          return { ...state, vms: [...state.vms, vm] };
+        }
       });
     },
+
+    /**
+     * Internal method to remove VM from cache without API call
+     */
+    _removeFromCache(vmId) {
+      if (!vmId) return;
+      
+      store.update((state) => ({
+        ...state,
+        vms: state.vms.filter(v => v.id !== vmId)
+      }));
+    }
   };
 }

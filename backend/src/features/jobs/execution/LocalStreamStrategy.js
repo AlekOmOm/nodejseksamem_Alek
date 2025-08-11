@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn } from "child_process";
 
 export class LocalStreamStrategy {
   static spawn(command, workingDir = null) {
@@ -10,7 +10,7 @@ export class LocalStreamStrategy {
     const options = {
       cwd: workingDir || process.cwd(),
       env: process.env,
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ["pipe", "pipe", "pipe"],
     };
 
     return spawn(executable, args, options);
@@ -19,23 +19,23 @@ export class LocalStreamStrategy {
   static parseCommand(command) {
     // Simple command parsing - splits on spaces but respects quotes
     const parts = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
-    let quoteChar = '';
+    let quoteChar = "";
 
     for (let i = 0; i < command.length; i++) {
       const char = command[i];
-      
+
       if ((char === '"' || char === "'") && !inQuotes) {
         inQuotes = true;
         quoteChar = char;
       } else if (char === quoteChar && inQuotes) {
         inQuotes = false;
-        quoteChar = '';
-      } else if (char === ' ' && !inQuotes) {
+        quoteChar = "";
+      } else if (char === " " && !inQuotes) {
         if (current.trim()) {
           parts.push(current.trim());
-          current = '';
+          current = "";
         }
       } else {
         current += char;
@@ -51,13 +51,13 @@ export class LocalStreamStrategy {
 
   static spawnShell(command, workingDir = null) {
     // Alternative method that uses shell execution
-    const shell = process.platform === 'win32' ? 'cmd' : 'bash';
-    const shellFlag = process.platform === 'win32' ? '/c' : '-c';
+    const shell = process.platform === "win32" ? "cmd" : "bash";
+    const shellFlag = process.platform === "win32" ? "/c" : "-c";
 
     const options = {
       cwd: workingDir || process.cwd(),
       env: process.env,
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ["pipe", "pipe", "pipe"],
     };
 
     return spawn(shell, [shellFlag, command], options);

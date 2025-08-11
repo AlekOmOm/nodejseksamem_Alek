@@ -2,15 +2,13 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { SERVER_CONFIG, DATABASE_CONFIG } from "./config/index.js";
-import { Pool } from "pg";
+import { SERVER_CONFIG } from "./config/index.js";
 import { Router } from "express";
-import { commandsRouter } from "./features/commands/commands.js";
-import { createJobsRouter } from "./features/jobs/jobs.js";
-import { createLogsRouter } from "./features/logs/logs.js";
-import { ExecutionManager } from "./features/commands/execution-manager.js";
-import { createVmsRouter } from "./features/vms/vms.js";
-import { createAuthRouter } from "./features/auth/auth.js";
+import { createCommandsRouter } from "./features/commands/commandsRouter.js";
+import { createJobsRouter } from "./features/jobs/jobsRouter.js";
+import { createLogsRouter } from "./features/logs/logsRouter.js";
+import { createVmsRouter } from "./features/vms/vmsRouter.js";
+import { createAuthRouter } from "./features/auth/authRouter.js";
 import session from "express-session";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -44,17 +42,13 @@ app.use(
 app.use(express.static(path.join(__dirname, SERVER_CONFIG.staticPath)));
 app.use(cors(SERVER_CONFIG.cors));
 
-// db and execution manager
-const db = new Pool(DATABASE_CONFIG);
-const executionManager = new ExecutionManager(null, db);
-
 // API routers
 const apiRouter = Router();
-apiRouter.use("/auth", createAuthRouter(db));
-apiRouter.use("/logs", createLogsRouter(db));
-apiRouter.use("/commands", commandsRouter);
-apiRouter.use("/vms", createVmsRouter(db, executionManager));
-apiRouter.use("/jobs", createJobsRouter(db, executionManager));
+apiRouter.use("/auth", createAuthRouter());
+apiRouter.use("/logs", createLogsRouter());
+apiRouter.use("/commands", createCommandsRouter());
+apiRouter.use("/vms", createVmsRouter());
+apiRouter.use("/jobs", createJobsRouter());
 app.use("/api", apiRouter);
 
-export { app, db, executionManager };
+export { app };

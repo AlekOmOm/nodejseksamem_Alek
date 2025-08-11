@@ -16,32 +16,34 @@
 
   let isAuthenticated = $derived(getIsAuthenticated());
   onMount(async () => {
-    console.log("🚀 [App.svelte] Starting initialization...");
     
     try {
       await initializeAuthServices();
       await initializeAuth();
       
       ready = true;
-      console.log("✅ [App.svelte] Auth initialization complete");
     } catch (error) {
       console.error("❌ [App.svelte] Auth initialization failed:", error);
-      ready = true; // Still show UI even if auth fails
+      ready = true; 
     }
   });
   async function handleAuthSuccess() {
-    console.log("🎉 [App.svelte] Authentication successful, initializing full services...");
-    isAuthenticated = true;
-
     try {
       await initializeServices();
       await initializeStoresData();
       
       const vmStore = getVMStore();
-      const loadedVMs = vmStore.getVMs();
-      await initializedUIState(loadedVMs);
-      await selectVM(loadedVMs[0]);
-
+      if (vmStore && vmStore.isInitialized()) {
+        const loadedVMs = vmStore.getVMs();
+        if (loadedVMs && loadedVMs.length > 0) {
+          await initializedUIState(loadedVMs);
+          await selectVM(loadedVMs[0]);
+        } else {
+          console.log("No VMs available after initialization");
+        }
+      } else {
+        console.log("VMStore not initialized after data loading");
+      }
     } catch (error) {
       console.error("❌ [App.svelte] Full initialization failed:", error);
     }

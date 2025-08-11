@@ -32,14 +32,20 @@
   // State access
   const selectedVMId = $derived(getSelectedVMId());
   const commandStore = $derived(getCommandStore());
-  let commandCount = $derived((commandStore?.commandsByVM?.[vm.id]?.length) || 0);
+  let commandCount = $derived(() => {
+    const commands = commandStore?.commandsByVM?.[vm.id];
+    return Array.isArray(commands) ? commands.length : 0;
+  });
   
   // Local UI state
   let showVMForm = $state(false);
   let showCommandsModal = $state(false);
 
   // Computed
-  const isSelected = $derived(vm.id === selectedVMId);
+  const isSelected = $derived(() => {
+    const currentVMId = $state.snapshot(selectedVMId);
+    return vm.id === currentVMId;
+  });
   const environmentVariant = $derived(
     vm.environment === 'production' ? 'destructive' : 
     vm.environment === 'staging' ? 'secondary' : 'default'

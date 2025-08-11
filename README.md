@@ -1,4 +1,4 @@
-# VM Orchestrator – MVP
+# VM Orchestrator
 
 **tl;dr** A minimal DevOps cockpit that lets you execute 'make <target>' and tail logs across local and remote VMs with real-time streaming and audit trail.
 
@@ -43,8 +43,27 @@
 ```bash
 git clone https://github.com/your-org/vm-orchestrator.git
 cd vm-orchestrator
+```
+
+_configure_
+
+```bash
+# cp and fill
+cp .env.sample .env && nvim .env
+cp serverless/.env.sample serverless/.env && nvim serverless/.env
+cp frontend/.env.sample frontend/.env && nvim frontend/.env
+cp backend/.env.sample backend/.env && nvim backend/.env
+
+# add session secret key
+echo "SESSION_SECRET=your-secret-key" >> backend/.env
+```
+
+_setup & run_
+
+```bash
+
 make setup      # build containers, install deps, initialise DB
-make dev        # start backend, frontend & postgres
+make run        # start backend, frontend & postgres
 ```
 
 Application endpoints

@@ -1,16 +1,16 @@
+import { LogsRepository } from "../logs/LogRepository.js";
+import { dbSingleton } from "../../database/PgsqlDatabase.js";
 
-import { LogModel } from '../logs/LogModel.js';
-
-export class JobModel {
-  constructor(db, _executionManager) {
-    this.db = db;
+export class JobsRepository {
+  constructor() {
+    this.db = dbSingleton;
   }
 
   async getJobs(limit = 10) {
     // 1. Fetch from Postgres cache first
     const cappedLimit = Math.min(parseInt(limit, 10) || 10, 100);
     const cachedJobs = await this.db.query(
-      'SELECT * FROM jobs ORDER BY started_at DESC LIMIT $1',
+      "SELECT * FROM jobs ORDER BY started_at DESC LIMIT $1",
       [cappedLimit]
     );
     if (cachedJobs.rows.length > 0) {
@@ -22,7 +22,9 @@ export class JobModel {
 
   async getJob(jobId) {
     // 1. Check cache
-    const cachedJob = await this.db.query('SELECT * FROM jobs WHERE id = $1', [jobId]);
+    const cachedJob = await this.db.query("SELECT * FROM jobs WHERE id = $1", [
+      jobId,
+    ]);
     if (cachedJob.rows.length > 0) {
       return cachedJob.rows[0];
     }
@@ -30,12 +32,18 @@ export class JobModel {
   }
 
   async createJob(jobData) {
-    const { id, vm_id, command, status = 'running', started_at = new Date() } = jobData;
+    const {
+      id,
+      vm_id,
+      command,
+      status = "running",
+      started_at = new Date(),
+    } = jobData;
     const result = await this.db.query(
       `INSERT INTO jobs (id, vm_id, command, status, started_at)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-       [id, vm_id, command, status, started_at]
+      [id, vm_id, command, status, started_at]
     );
     return result.rows[0];
   }
@@ -50,21 +58,23 @@ export class JobModel {
       idx += 1;
     }
     values.push(jobId);
-    const query = `UPDATE jobs SET ${fields.join(', ')}, cached_at = NOW() WHERE id = $${idx} RETURNING *`;
+    const query = `UPDATE jobs SET ${fields.join(
+      ", "
+    )}, cached_at = NOW() WHERE id = $${idx} RETURNING *`;
     const result = await this.db.query(query, values);
     return result.rows[0];
   }
 
   async getJobLogs(jobId, limit = 1000) {
     // Logs are handled by LogModel, but this shows the pattern
-    const logModel = new LogModel(this.db);
+    const logModel = new LogsRepository(this.db);
     return logModel.getLogsForJob(jobId, limit);
   }
 
   async getJobsForVM(vmId, limit = 50) {
     const cappedLimit = Math.min(parseInt(limit, 10) || 50, 100);
     const result = await this.db.query(
-      'SELECT * FROM jobs WHERE vm_id = $1 ORDER BY started_at DESC LIMIT $2',
+      "SELECT * FROM jobs WHERE vm_id = $1 ORDER BY started_at DESC LIMIT $2",
       [vmId, cappedLimit]
     );
     return result.rows;
@@ -76,19 +86,23 @@ export class JobModel {
     }
 
     const values = [];
-    const placeholders = jobs.map((job, i) => {
-      const n = i * 7;
-      values.push(
-        job.id,
-        job.vm_id,
-        job.command,
-        job.status,
-        job.started_at,
-        job.finished_at,
-        new Date() // cached_at
-      );
-      return `($${n+1}, $${n+2}, $${n+3}, $${n+4}, $${n+5}, $${n+6}, $${n+7})`;
-    }).join(',');
+    const placeholders = jobs
+      .map((job, i) => {
+        const n = i * 7;
+        values.push(
+          job.id,
+          job.vm_id,
+          job.command,
+          job.status,
+          job.started_at,
+          job.finished_at,
+          new Date() // cached_at
+        );
+        return `($${n + 1}, $${n + 2}, $${n + 3}, $${n + 4}, $${n + 5}, $${
+          n + 6
+        }, $${n + 7})`;
+      })
+      .join(",");
 
     const query = `
       INSERT INTO jobs (id, vm_id, command, status, started_at, finished_at, cached_at)

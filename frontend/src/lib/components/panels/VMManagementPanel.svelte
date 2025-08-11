@@ -10,6 +10,7 @@
 
   // Only handle manual refresh, not initial loading
   async function handleRefreshVMs() {
+
     await vmStore?.loadVMs(true);
   }
 </script>
