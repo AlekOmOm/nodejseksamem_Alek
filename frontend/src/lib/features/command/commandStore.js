@@ -6,6 +6,7 @@ import { getVMStore } from "$lib/state/stores.state.svelte.js";
 const initialState = {
   vmCommands: [],
   commandsByVM: {},
+  commandCounts: {}, // Add this
   availableCommandTemplates: {},
   loading: false,
   error: null,
@@ -46,6 +47,7 @@ export function createCommandStore(dependencies) {
           ...state,
           vmCommands,
           commandsByVM: { ...state.commandsByVM, [vmId]: vmCommands },
+          commandCounts: { ...state.commandCounts, [vmId]: vmCommands.length }, // Add this
         });
 
         return vmCommands;
@@ -103,12 +105,17 @@ export function createCommandStore(dependencies) {
 
         store.update((s) => {
           const vmCmds = s.commandsByVM[vmId] ?? [];
+          const newCmds = vmCmds.concat(newCommand);
           return {
             ...s,
             vmCommands: s.vmCommands.concat(newCommand),
             commandsByVM: {
               ...s.commandsByVM,
-              [vmId]: vmCmds.concat(newCommand),
+              [vmId]: newCmds,
+            },
+            commandCounts: {
+              ...s.commandCounts,
+              [vmId]: newCmds.length, // Update count
             },
           };
         });
@@ -193,6 +200,17 @@ export function createCommandStore(dependencies) {
     },
 
     /**
+     * Get commands for a VM (synchronous - cache only)
+     * @param {string} vmId - The VM ID
+     * @returns {Array} The commands for the VM from cache
+     */
+    getCommandsForVMSync(vmId) {
+      if (!vmId) return [];
+      const state = store.getState();
+      return state.commandsByVM[vmId] || [];
+    },
+
+    /**
      * Get commands for a VM
      * @param {string|Object} vmIdentifier - The VM identifier (ID or alias)
      * @param {string} caller (optional) - The caller of the function
@@ -206,6 +224,7 @@ export function createCommandStore(dependencies) {
         return state.commandsByVM[vmIdentifier];
       }
 
+      // This returns a promise - problematic for $derived
       return this.loadVMCommands(vmIdentifier, caller);
     },
 
@@ -218,6 +237,11 @@ export function createCommandStore(dependencies) {
 
     getAvailableCommandTemplates() {
       return store.getState().availableCommandTemplates;
+    },
+
+    getCommandCount(vmId) {
+      if (!vmId) return 0;
+      return store.getState().commandCounts[vmId] || 0;
     },
   };
 }

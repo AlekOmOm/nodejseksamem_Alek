@@ -4,7 +4,7 @@ import { createVMStore } from "$lib/features/vm/vmStore.js";
 import { createCommandStore } from "$lib/features/command/commandStore.js";
 import { createJobStore } from "$lib/features/job/jobStore.js";
 import { createLogStore } from "$lib/features/log/logStore.js";
-import { attachStores, setVms } from "$lib/state/ui.state.svelte.js";
+import { attachStores } from "$lib/state/ui.state.svelte.js";
 
 /* ── private reactive fields ── */
 let _vmStore = $state(null);
@@ -74,14 +74,8 @@ export async function initializeStoresData() {
       loadPromises.push(
         _vmStore
           .loadVMs()
-          .then((vms) => {
-            if (vms) setVms(vms);
-            return vms;
-          })
           .catch((err) => {
             console.error("Failed to load VMs:", err);
-            // Continue with empty VMs instead of failing
-            setVms([]);
             return [];
           })
       );

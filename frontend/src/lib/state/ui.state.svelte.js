@@ -10,11 +10,9 @@ import {
   getJobStore,
   getLogStore,
 } from "$lib/state/stores.state.svelte.js";
-import { debug } from "$lib/debug.js";
 import { validateVMForm } from "$lib/features/vm/crud/vmUtils.js";
 
 /* ── private reactive fields ── */
-let _vms = $state([]);
 
 // vm selected - initialize from localStorage
 function initSelectedVMId() {
@@ -54,13 +52,10 @@ let _isEditingVMCommands = $state(false);
 let _selectedCommand = $state(null);
 let _editingCommand = $state(null);
 
+// Add this new reactive state for recent VMs
+let _recentVMOrder = $state([]); // Array of VM aliases in recent order
+
 /* ── public read-only accessors ── */
-export function getVms() {
-  return _vms;
-}
-export function setVms(vms) {
-  _vms = vms;
-}
 // selectedVM
 
 export function getSelectedVM() {
@@ -81,11 +76,13 @@ export function getSelectedVMJobs() {
 }
 function setSelectedVM(vm, caller = "unknown") {
   _selectedVM = vm;
-  
+
   // Persist to localStorage
   if (vm) {
     localStorage.setItem("lastSelectedVM", JSON.stringify(vm));
-    console.log(`🔄 [UI State] Selected VM saved to localStorage: ${vm.alias || vm.id}`);
+    console.log(
+      `🔄 [UI State] Selected VM saved to localStorage: ${vm.alias || vm.id}`
+    );
   } else {
     localStorage.removeItem("lastSelectedVM");
     console.log("🔄 [UI State] Selected VM cleared from localStorage");
@@ -124,6 +121,11 @@ export function setCurrentJob(job) {
   _currentJob = job;
 }
 
+// Add new accessor for recent VM order
+export function getRecentVMOrder() {
+  return _recentVMOrder;
+}
+
 /* ── public actions that mutate state ── */
 // select functions
 
@@ -142,7 +144,11 @@ export async function selectVM(vmPrm) {
 
   _setSelectedVMId(vm.id, vm, "selectVM");
   setSelectedVM(vm, "selectVM end");
-  if (_selectedVM) addRecentVM(getSelectedVM().alias);
+
+  // Update recent VM order
+  if (_selectedVM) {
+    updateRecentVMOrder(_selectedVM.alias);
+  }
 
   _selectedVMCommands = await getCommandStore().getCommandsForVM(
     _selectedVMId,
@@ -242,6 +248,9 @@ export function attachStores({
   _jobStore = jobStoreRef;
   _logStore = logStoreRef;
 
+  // Initialize recent VM order
+  initRecentVMOrder();
+
   _storesAttached = true;
 }
 
@@ -276,74 +285,87 @@ $effect.root(() => {
 // --------------------- helper ------------------------
 // recent VMs
 
-export function initializeRecentVMs(vms, caller = "unknown") {
-  const aliases = _getRecentVMAliases();
-  if (!Array.isArray(vms)) return aliases;
-  return _sortVMsByRecent(vms, aliases);
+// New function to update recent order reactively
+function updateRecentVMOrder(vmAlias) {
+  if (!vmAlias) return;
+
+  // Remove if already exists
+  _recentVMOrder = _recentVMOrder.filter((alias) => alias !== vmAlias);
+
+  // Add to front
+  _recentVMOrder = [vmAlias, ..._recentVMOrder];
+
+  // Also update localStorage for persistence
+  localStorage.setItem("recentVMs", JSON.stringify(_recentVMOrder));
 }
 
-export function getRecentVMs(vms, caller = "unknown") {
-  const aliases = _getRecentVMAliases();
-  if (!Array.isArray(vms)) return aliases;
-  return _sortVMsByRecent(vms, aliases);
+// Initialize recent order from localStorage
+function initRecentVMOrder() {
+  try {
+    const json = localStorage.getItem("recentVMs");
+    _recentVMOrder = json ? JSON.parse(json) : [];
+  } catch (e) {
+    _recentVMOrder = [];
+  }
 }
 
-function addRecentVM(vmAlias, caller = "unknown") {
-  const aliases = _getRecentVMAliases();
-  const idx = aliases.indexOf(vmAlias);
-  if (idx !== -1) aliases.splice(idx, 1);
-  aliases.unshift(vmAlias);
-  localStorage.setItem("recentVMs", JSON.stringify(aliases));
-}
+export function getRecentVMs(vms) {
+  if (!Array.isArray(vms)) return [];
 
-function _getRecentVMAliases(caller = "unknown") {
-  const json = localStorage.getItem("recentVMs");
-  return json ? JSON.parse(json) : [];
-}
+  const recentOrder = _recentVMOrder;
+  const vmMap = new Map(vms.map((vm) => [vm.alias, vm]));
 
-function _sortVMsByRecent(vms, recentAliases, caller = "unknown") {
-  const recentSet = new Set(recentAliases);
-  const recentVMs = vms.filter((vm) => recentSet.has(vm.alias));
+  // Get VMs in recent order
+  const recentVMs = recentOrder
+    .map((alias) => vmMap.get(alias))
+    .filter((vm) => vm !== undefined);
+
+  // Get remaining VMs not in recent list
+  const recentSet = new Set(recentOrder);
   const otherVMs = vms.filter((vm) => !recentSet.has(vm.alias));
 
-  // Sort recent VMs by their position in recentIds array
-  const sortedRecent = recentVMs.sort((a, b) => {
-    return recentAliases.indexOf(a.alias) - recentAliases.indexOf(b.alias);
-  });
-
-  const result = [...sortedRecent, ...otherVMs];
-  return result;
+  return [...recentVMs, ...otherVMs];
 }
 
 export async function initializedUIState(vms) {
   return new Promise(async (resolve) => {
-    initializeRecentVMs(vms);
-    
+    initRecentVMOrder();
+
     // Try to restore the previously selected VM
     const savedVM = getSelectedVM();
     const savedVMId = getSelectedVMId();
-    
+
     let vmToSelect = null;
-    
+
     if (savedVM && savedVMId) {
       // Try to find the saved VM in the loaded VMs
-      vmToSelect = vms.find(vm => vm.id === savedVMId || vm.alias === savedVM.alias);
+      vmToSelect = vms.find(
+        (vm) => vm.id === savedVMId || vm.alias === savedVM.alias
+      );
       if (vmToSelect) {
-        console.log(`🔄 [UI State] Restoring saved VM: ${vmToSelect.alias || vmToSelect.id}`);
+        console.log(
+          `🔄 [UI State] Restoring saved VM: ${
+            vmToSelect.alias || vmToSelect.id
+          }`
+        );
       }
     }
-    
+
     // If no saved VM or saved VM not found, use first recent VM
     if (!vmToSelect) {
       const recentVMs = getRecentVMs(vms);
       vmToSelect = recentVMs[0];
-      console.log(`🔄 [UI State] Selecting first available VM: ${vmToSelect?.alias || "none"}`);
+      console.log(
+        `🔄 [UI State] Selecting first available VM: ${
+          vmToSelect?.alias || "none"
+        }`
+      );
     }
-    
+
     if (vmToSelect) {
       await selectVM(vmToSelect);
     }
-    
+
     resolve();
   });
 }

@@ -70,32 +70,6 @@
         {/each}
       </Grid>
 
-       <!--
-      {#each vmCommands as command}
-        <Button
-          variant="outline"
-          size="sm"
-          class="w-full justify-start h-auto p-3"
-          disabled={isExecuting}
-          onclick={() => executeCommand(command)}
-        >
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-              {#if isExecuting && jobService.currentJob?.command === command.cmd}
-                <Loader2 class="w-4 h-4 animate-spin" />
-              {:else}
-                <Play class="w-4 h-4" />
-              {/if}
-              <span class="font-medium">{command.name}</span>
-            </div>
-            {#if command.description}
-              <span class="text-xs text-muted-foreground">{command.description}</span>
-            {/if}
-          </div>
-        </Button>
-      {/each}
-      -->
-
     </div>
   {/if}
 </div>

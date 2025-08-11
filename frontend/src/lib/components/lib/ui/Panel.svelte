@@ -10,7 +10,7 @@
     base: "bg-card text-card-foreground border border-border",
     variants: {
       variant: {
-        sidebar: " min-w-[20vw] max-w-[50vw] flex-shrink-0 border-r border-l-0 border-t-0 border-b-0 rounded-none",
+        sidebar: " min-w-[25vw] max-w-[35vw] flex-shrink-0 border-r border-l-0 border-t-0 border-b-0 rounded-none",
         main: "flex-1 min-h-0 bg-background border-0",
         card: "rounded-lg shadow-sm",
         default: "rounded-lg"

@@ -4,9 +4,8 @@
 
 <script>
   import VM from '$lib/features/vm/VM.svelte';
-  import Grid from '$lib/components/lib/ui/Grid.svelte';
   import { getVMStore } from '$lib/state/stores.state.svelte.js';
-  import { getRecentVMs, getSelectedVM } from '$lib/state/ui.state.svelte.js';
+  import { getRecentVMs, getSelectedVM, getRecentVMOrder } from '$lib/state/ui.state.svelte.js';
 
   const selectedVM = $derived(getSelectedVM());
   const vmStore = $derived(getVMStore());
@@ -15,26 +14,32 @@
   const initialized = $derived(vmStore?.isInitialized() || false);
   const error = $derived(vmStore?.getError());
   
-  // Use $derived for reactive computation instead of $effect
-  const recentVMs = $derived(getRecentVMs(vms));
+  // Track recent order reactively
+  const recentOrder = $derived(getRecentVMOrder());
+  
+  // Sort VMs based on recent order - will update when recentOrder changes
+  const sortedVMs = $derived(
+    vms.length === 0 ? [] : (() => {
+      const vmMap = new Map(vms.map(vm => [vm.alias, vm]));
+      
+      // Get VMs in recent order
+      const recentVMs = recentOrder
+        .map(alias => vmMap.get(alias))
+        .filter(vm => vm !== undefined);
+      
+      // Get remaining VMs
+      const recentSet = new Set(recentOrder);
+      const otherVMs = vms.filter(vm => !recentSet.has(vm.alias));
+      
+      return [...recentVMs, ...otherVMs];
+    })()
+  );
   
   // Determine display state
   const showLoading = $derived(!initialized && loading);
   const showEmpty = $derived(initialized && !loading && vms.length === 0);
   const showVMs = $derived(initialized && !loading && vms.length > 0);
   
-  // Debug logging
-  $effect(() => {
-    console.log("🖥️ [VMSidebar] State:", {
-      vmCount: vms?.length || 0,
-      loading,
-      initialized,
-      error,
-      showLoading,
-      showEmpty,
-      showVMs
-    });
-  });
 </script>
 
 <aside class="w-full h-full bg-background border-r border-border overflow-y-auto">
@@ -58,12 +63,10 @@
         <p class="text-xs text-muted-foreground">No VMs configured</p>
       </div>
     {:else if showVMs}
-      <div class="space-y-1">
-        <Grid minWidth="20vw">
-          {#each (recentVMs.length > 0 ? recentVMs : vms) as vm (vm.alias)}
-            <VM {vm} size="small"/>
-          {/each}
-        </Grid>
+      <div class="space-y-2 px-2">
+        {#each sortedVMs as vm (vm.alias)}
+          <VM {vm} size="small"/>
+        {/each}
       </div>
     {:else}
       <div class="text-center py-4">

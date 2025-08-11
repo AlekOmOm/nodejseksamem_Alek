@@ -4,7 +4,7 @@
  * CRUD Pattern:
  * - READ: Cache-first, API fallback (cache → API if not found)
  * - CREATE/UPDATE/DELETE: API-first, then update cache (API → cache sync)
- * 
+ *
  * Follows store-loading.md pattern for global data initialization.
  */
 
@@ -31,7 +31,7 @@ export function createVMStore(dependencies) {
 
     async loadVMs(force = false) {
       const state = store.getState();
-      
+
       // Skip if already loaded and not forced
       if (state.initialized && !force && state.vms.length > 0) {
         return state.vms;
@@ -43,35 +43,33 @@ export function createVMStore(dependencies) {
       }
 
       store.update((s) => ({ ...s, loading: true, error: null }));
-      
+
       try {
         const vms = await vmService.getVMs();
-        
-        store.set({ 
-          vms: vms || [], 
-          loading: false, 
+
+        store.set({
+          vms: vms || [],
+          loading: false,
           error: null,
-          initialized: true 
+          initialized: true,
         });
-        
+
         return vms;
       } catch (error) {
         console.error("Failed to load VMs:", error);
-        store.update((s) => ({ 
-          ...s, 
-          loading: false, 
-          error: error.message 
+        store.update((s) => ({
+          ...s,
+          loading: false,
+          error: error.message,
         }));
         throw error;
       }
     },
 
-    // ═══════════════════════════════════════════════════════════
-    // READ OPERATIONS (Cache-first, API fallback)
-    // ═══════════════════════════════════════════════════════════
+    // READ (Cache-first with API fallback)
 
     /**
-     * Get all VMs from cache (synchronous)
+     * Get all VMs from cache
      */
     getVMs() {
       return store.getState().vms;
@@ -82,13 +80,13 @@ export function createVMStore(dependencies) {
      */
     async getVMById(vmId, caller = "unknown") {
       if (!vmId) return null;
-      
+
       // 1. Check cache first
-      const cachedVM = store.getState().vms.find(vm => vm.id === vmId);
+      const cachedVM = store.getState().vms.find((vm) => vm.id === vmId);
       if (cachedVM) {
         return cachedVM;
       }
-      
+
       // 2. Not in cache - fetch from API
       try {
         const vm = await vmService.getVM(vmId, caller);
@@ -110,7 +108,7 @@ export function createVMStore(dependencies) {
       if (!alias) return null;
 
       // 1. Check cache first
-      const cachedVM = store.getState().vms.find(vm => vm.alias === alias);
+      const cachedVM = store.getState().vms.find((vm) => vm.alias === alias);
       if (cachedVM) {
         return cachedVM;
       }
@@ -136,12 +134,12 @@ export function createVMStore(dependencies) {
       if (!identifier) return null;
 
       // 1. Try cache by alias
-      let vm = store.getState().vms.find(vm => vm.alias === identifier);
+      let vm = store.getState().vms.find((vm) => vm.alias === identifier);
       if (vm) return vm;
 
       // 2. Try cache by ID (if looks like UUID)
       if (identifier.length > 10 && identifier.includes("-")) {
-        vm = store.getState().vms.find(vm => vm.id === identifier);
+        vm = store.getState().vms.find((vm) => vm.id === identifier);
         if (vm) return vm;
       }
 
@@ -149,31 +147,29 @@ export function createVMStore(dependencies) {
       return await this.getVMByAlias(identifier, caller);
     },
 
-    // ═══════════════════════════════════════════════════════════
-    // CREATE/UPDATE/DELETE OPERATIONS (API-first, cache sync)
-    // ═══════════════════════════════════════════════════════════
+    // CREATE/UPDATE/DELETE (API-first, cache sync)
 
     /**
-     * Create VM - API first, then add to cache
+     * Create VM - API first, then add to cache (API → cache sync)
      */
     async createVM(vmData) {
       try {
         // 1. Create via API
         const newVM = await vmService.createVM(vmData);
-        
+
         // 2. Add to local cache
         store.update((state) => ({
           ...state,
           vms: [...state.vms, newVM],
-          error: null
+          error: null,
         }));
-        
+
         return newVM;
       } catch (error) {
-        console.error('Failed to create VM:', error);
+        console.error("Failed to create VM:", error);
         store.update((state) => ({
           ...state,
-          error: error.message
+          error: error.message,
         }));
         throw error;
       }
@@ -186,20 +182,20 @@ export function createVMStore(dependencies) {
       try {
         // 1. Update via API
         const updatedVM = await vmService.updateVM(vmId, vmData);
-        
+
         // 2. Update local cache
         store.update((state) => ({
           ...state,
-          vms: state.vms.map(vm => vm.id === vmId ? updatedVM : vm),
-          error: null
+          vms: state.vms.map((vm) => (vm.id === vmId ? updatedVM : vm)),
+          error: null,
         }));
-        
+
         return updatedVM;
       } catch (error) {
-        console.error('Failed to update VM:', error);
+        console.error("Failed to update VM:", error);
         store.update((state) => ({
           ...state,
-          error: error.message
+          error: error.message,
         }));
         throw error;
       }
@@ -212,20 +208,20 @@ export function createVMStore(dependencies) {
       try {
         // 1. Delete via API
         await vmService.deleteVM(vmId);
-        
+
         // 2. Remove from local cache
         store.update((state) => ({
           ...state,
-          vms: state.vms.filter(vm => vm.id !== vmId),
-          error: null
+          vms: state.vms.filter((vm) => vm.id !== vmId),
+          error: null,
         }));
-        
+
         return true;
       } catch (error) {
-        console.error('Failed to delete VM:', error);
+        console.error("Failed to delete VM:", error);
         store.update((state) => ({
           ...state,
-          error: error.message
+          error: error.message,
         }));
         throw error;
       }
@@ -256,12 +252,12 @@ export function createVMStore(dependencies) {
      */
     _addToCache(vm) {
       if (!vm || !vm.id) return;
-      
+
       store.update((state) => {
-        const exists = state.vms.find(v => v.id === vm.id);
+        const exists = state.vms.find((v) => v.id === vm.id);
         if (exists) {
           // Update existing
-          const vms = state.vms.map(v => v.id === vm.id ? vm : v);
+          const vms = state.vms.map((v) => (v.id === vm.id ? vm : v));
           return { ...state, vms };
         } else {
           // Add new
@@ -275,11 +271,11 @@ export function createVMStore(dependencies) {
      */
     _removeFromCache(vmId) {
       if (!vmId) return;
-      
+
       store.update((state) => ({
         ...state,
-        vms: state.vms.filter(v => v.id !== vmId)
+        vms: state.vms.filter((v) => v.id !== vmId),
       }));
-    }
+    },
   };
 }

@@ -32,10 +32,11 @@
   // State access
   const selectedVMId = $derived(getSelectedVMId());
   const commandStore = $derived(getCommandStore());
-  let commandCount = $derived(() => {
-    const commands = commandStore?.commandsByVM?.[vm.id];
-    return Array.isArray(commands) ? commands.length : 0;
-  });
+  
+  // Get command count from store
+  const commandCount = $derived(
+    commandStore ? commandStore.getCommandCount(vm.id) : 0
+  );
   
   // Local UI state
   let showVMForm = $state(false);
@@ -114,6 +115,4 @@
   </Card>
 </div>
 
-<!-- Self-contained CRUD modals -->
 <VmForm vm={vm} bind:isOpen={showVMForm} />
-<!-- Commands modal would go here when implemented -->
