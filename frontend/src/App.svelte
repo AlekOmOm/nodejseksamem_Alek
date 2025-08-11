@@ -15,11 +15,17 @@
   let showRegister = $state(false);
 
   let isAuthenticated = $derived(getIsAuthenticated());
+  
   onMount(async () => {
-    
     try {
       await initializeAuthServices();
       await initializeAuth();
+      
+      // If user is already authenticated after validation, initialize services
+      if (getIsAuthenticated()) {
+        console.log("🔄 [App.svelte] User already authenticated, initializing services...");
+        await handleAuthSuccess();
+      }
       
       ready = true;
     } catch (error) {
@@ -29,20 +35,40 @@
   });
   async function handleAuthSuccess() {
     try {
+      console.log("🎉 [App.svelte] Auth successful, initializing services...");
+      
       await initializeServices();
       await initializeStoresData();
       
       const vmStore = getVMStore();
       if (vmStore && vmStore.isInitialized()) {
         const loadedVMs = vmStore.getVMs();
+        console.log("📊 [App.svelte] Loaded VMs:", loadedVMs?.length || 0);
+        
         if (loadedVMs && loadedVMs.length > 0) {
           await initializedUIState(loadedVMs);
           await selectVM(loadedVMs[0]);
+          console.log("✅ [App.svelte] UI state initialized with VM:", loadedVMs[0]?.alias);
         } else {
-          console.log("No VMs available after initialization");
+          console.log("⚠️ [App.svelte] No VMs available after initialization");
         }
       } else {
-        console.log("VMStore not initialized after data loading");
+        console.log("❌ [App.svelte] VMStore not initialized after data loading");
+        
+        // Force VM loading if store exists but not initialized
+        if (vmStore) {
+          console.log("🔄 [App.svelte] Force loading VMs...");
+          try {
+            const vms = await vmStore.loadVMs(true);
+            if (vms && vms.length > 0) {
+              await initializedUIState(vms);
+              await selectVM(vms[0]);
+              console.log("✅ [App.svelte] Force loaded VMs:", vms.length);
+            }
+          } catch (error) {
+            console.error("❌ [App.svelte] Force VM loading failed:", error);
+          }
+        }
       }
     } catch (error) {
       console.error("❌ [App.svelte] Full initialization failed:", error);

@@ -22,12 +22,12 @@ export class AuthService {
    async validateSession() {
       try {
          const response = await this.api.get(`${this.ENDPOINT}/me`);
-         if (response.status === 200) {
+         if (response && (response.id || response.email)) {
             // Update user data in case it changed
-            setUser(response.data);
+            setUser(response);
             return true;
          }
-         console.log("response", response);
+         console.log("🔐 [AuthService] Invalid response:", response);
          return false;
       } catch (error) {
          console.log(
@@ -44,7 +44,9 @@ export class AuthService {
          userData
       );
 
-      setUser(response.data);
+      if (response && (response.id || response.email)) {
+         setUser(response);
+      }
       return response;
    }
 
@@ -53,16 +55,26 @@ export class AuthService {
          email,
          password,
       });
-      setUser(response);
+      
+      if (response && (response.id || response.email)) {
+         setUser(response);
+      }
       return response;
    }
 
    async logout() {
-      const response = await this.api.post(`${this.ENDPOINT}/logout`);
-      if (response.status === 200) {
+      try {
+         await this.api.post(`${this.ENDPOINT}/logout`);
+         // Always logout locally, even if API call fails
          logout();
+         console.log("✅ [AuthService] Logout successful");
+         return { success: true };
+      } catch (error) {
+         console.error("❌ [AuthService] Logout API call failed:", error);
+         // Still logout locally to ensure user gets logged out
+         logout();
+         return { success: true, warning: "Logout API call failed but user logged out locally" };
       }
-      return response;
    }
 
    // GDPR delete user

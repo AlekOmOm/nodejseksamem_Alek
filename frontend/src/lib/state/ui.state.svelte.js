@@ -16,9 +16,27 @@ import { validateVMForm } from "$lib/features/vm/crud/vmUtils.js";
 /* ── private reactive fields ── */
 let _vms = $state([]);
 
-// vm selected
-let _selectedVMId = $state(localStorage.getItem("lastSelectedVMId"));
-let _selectedVM = $state(localStorage.getItem("lastSelectedVM") || null);
+// vm selected - initialize from localStorage
+function initSelectedVMId() {
+  return localStorage.getItem("lastSelectedVMId");
+}
+
+function initSelectedVM() {
+  try {
+    const vmStr = localStorage.getItem("lastSelectedVM");
+    if (!vmStr || vmStr === "null" || vmStr === "undefined") {
+      return null;
+    }
+    return JSON.parse(vmStr);
+  } catch (e) {
+    console.warn("Failed to parse selectedVM from localStorage:", e);
+    localStorage.removeItem("lastSelectedVM");
+    return null;
+  }
+}
+
+let _selectedVMId = $state(initSelectedVMId());
+let _selectedVM = $state(initSelectedVM());
 let _selectedVMCommands = $state([]);
 let _selectedVMJobs = $state([]);
 let _selectedTemplateCmd = $state(null);
@@ -63,6 +81,15 @@ export function getSelectedVMJobs() {
 }
 function setSelectedVM(vm, caller = "unknown") {
   _selectedVM = vm;
+  
+  // Persist to localStorage
+  if (vm) {
+    localStorage.setItem("lastSelectedVM", JSON.stringify(vm));
+    console.log(`🔄 [UI State] Selected VM saved to localStorage: ${vm.alias || vm.id}`);
+  } else {
+    localStorage.removeItem("lastSelectedVM");
+    console.log("🔄 [UI State] Selected VM cleared from localStorage");
+  }
 }
 
 // ----
@@ -289,9 +316,34 @@ function _sortVMsByRecent(vms, recentAliases, caller = "unknown") {
 }
 
 export async function initializedUIState(vms) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     initializeRecentVMs(vms);
-    selectVM(getRecentVMs()[0]);
+    
+    // Try to restore the previously selected VM
+    const savedVM = getSelectedVM();
+    const savedVMId = getSelectedVMId();
+    
+    let vmToSelect = null;
+    
+    if (savedVM && savedVMId) {
+      // Try to find the saved VM in the loaded VMs
+      vmToSelect = vms.find(vm => vm.id === savedVMId || vm.alias === savedVM.alias);
+      if (vmToSelect) {
+        console.log(`🔄 [UI State] Restoring saved VM: ${vmToSelect.alias || vmToSelect.id}`);
+      }
+    }
+    
+    // If no saved VM or saved VM not found, use first recent VM
+    if (!vmToSelect) {
+      const recentVMs = getRecentVMs(vms);
+      vmToSelect = recentVMs[0];
+      console.log(`🔄 [UI State] Selecting first available VM: ${vmToSelect?.alias || "none"}`);
+    }
+    
+    if (vmToSelect) {
+      await selectVM(vmToSelect);
+    }
+    
     resolve();
   });
 }

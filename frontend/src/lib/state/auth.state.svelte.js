@@ -1,7 +1,8 @@
 import { getService } from "$lib/core/ServiceContainer";
 
 /* ── private reactive fields ── */
-let _user = $state(() => {
+// Initialize user from localStorage on module load
+function initializeUser() {
   try {
     const userStr = localStorage.getItem("user");
     if (!userStr || userStr === "undefined" || userStr === "null") {
@@ -13,9 +14,12 @@ let _user = $state(() => {
     localStorage.removeItem("user"); // Clean up invalid data
     return null;
   }
-});
+}
 
-let _isAuthenticated = $state(_user !== null);
+let _user = $state(initializeUser());
+
+// Use $derived instead of $effect for computed values
+let _isAuthenticated = $derived(_user !== null);
 
 // Getters
 export function getUser() {
@@ -28,31 +32,44 @@ export function getIsAuthenticated() {
 
 // Setters
 export function setUser(user) {
-  localStorage.setItem("user", JSON.stringify(user));
-  _user = user;
-  _isAuthenticated = true;
+  if (user) {
+    localStorage.setItem("user", JSON.stringify(user));
+    _user = user;
+    console.log("🔐 [Auth] User logged in:", user.email || user.id);
+  } else {
+    localStorage.removeItem("user");
+    _user = null;
+    console.log("🔐 [Auth] User cleared");
+  }
 }
 
 export function logout() {
   _user = null;
-  _isAuthenticated = false;
   localStorage.removeItem("user");
   console.log("🔐 [Auth] User logged out");
 }
 
 export async function initializeAuth() {
   try {
+    console.log("🔄 [Auth] Initializing auth state...");
+    
     // If we have user in localStorage, validate the session
     if (_user) {
+      console.log("🔐 [Auth] Found user in localStorage, validating session...");
       const authService = getService("authService");
       const isValid = await authService.validateSession();
 
       if (!isValid) {
+        console.log("🔐 [Auth] Session invalid, logging out");
         logout();
+      } else {
+        console.log("✅ [Auth] Session valid");
       }
+    } else {
+      console.log("🔐 [Auth] No user in localStorage");
     }
   } catch (error) {
-    console.log("🔐 [Auth] Session validation failed, clearing auth");
+    console.error("❌ [Auth] Session validation failed:", error);
     logout();
   }
 }

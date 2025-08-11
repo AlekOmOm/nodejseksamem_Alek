@@ -22,6 +22,19 @@
   const showLoading = $derived(!initialized && loading);
   const showEmpty = $derived(initialized && !loading && vms.length === 0);
   const showVMs = $derived(initialized && !loading && vms.length > 0);
+  
+  // Debug logging
+  $effect(() => {
+    console.log("🖥️ [VMSidebar] State:", {
+      vmCount: vms?.length || 0,
+      loading,
+      initialized,
+      error,
+      showLoading,
+      showEmpty,
+      showVMs
+    });
+  });
 </script>
 
 <aside class="w-full h-full bg-background border-r border-border overflow-y-auto">
