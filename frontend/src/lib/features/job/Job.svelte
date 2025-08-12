@@ -15,7 +15,7 @@ import { getJobStore, getLogStore } from '$lib/state/stores.state.svelte.js';
 import { getService } from '$lib/core/ServiceContainer.js';
 import JobLogModal from '$lib/features/job/components/JobLogModal.svelte';
 
-let { jobId } = $props();
+let { job } = $props();
 
 // Store access
 const jobStore = $derived(getJobStore());
@@ -23,7 +23,7 @@ const logStore = $derived(getLogStore());
 const jobService = getService('jobService');
 
 // Self-contained job data
-const job = $derived(jobStore.jobs?.find(j => j.id === jobId));
+//const job = $derived(jobStore.jobs?.find(j => j.id === jobId));
 
 // Local modal state
 let showLogModal = $state(false);
@@ -71,6 +71,7 @@ function handleViewLogs() {
   showLogModal = true;
 }
 
+// TODO: retry logic should not use jobService.createJob, but rather jobService.retryJob, which should call commandService.executeCommand
 async function handleRetry() {
   if (!job) return;
   try {
