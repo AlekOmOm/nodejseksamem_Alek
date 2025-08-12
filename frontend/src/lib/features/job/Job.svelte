@@ -3,86 +3,88 @@
   
   Displays a single job with full self-contained functionality.
   Only requires jobId prop, manages own data and interactions.
+
+  jobs:
+  {
+    "id": "1",
+    "command": "echo 'Hello, world!'",
+    "command_name": "Hello World",
+    "status": "completed",
+  }
 -->
 
 <script>
+import { onMount } from 'svelte';
 import { Card, CardContent } from '$lib/components/lib/ui/card';
 import { Badge } from '$lib/components/lib/ui/badge';
 import { Button } from '$lib/components/lib/ui/button';
 import StatusBadge from '$lib/components/lib/ui/StatusBadge.svelte';
 import { Eye, RotateCcw, Clock, CheckCircle, XCircle } from '@lucide/svelte';
-import { getJobStore, getLogStore } from '$lib/state/stores.state.svelte.js';
 import { getService } from '$lib/core/ServiceContainer.js';
 import JobLogModal from '$lib/features/job/components/JobLogModal.svelte';
 
+// Props - ONLY identity data (following VM.svelte pattern)
 let { job } = $props();
 
-// Store access
-const jobStore = $derived(getJobStore());
-const logStore = $derived(getLogStore());
-const jobService = getService('jobService');
+console.log("[Job.svelte] job:", job.command_name, job.command, job.status);
 
-// Self-contained job data
-//const job = $derived(jobStore.jobs?.find(j => j.id === jobId));
+//const jobService = getService('jobService');
 
 // Local modal state
 let showLogModal = $state(false);
 
 // Computed properties
-const duration = $derived(() => {
-  if (!job?.started_at) return null;
-  const start = new Date(job.started_at);
-  const end = job.finished_at ? new Date(job.finished_at) : new Date();
-  const seconds = Math.round((end - start) / 1000);
+// const duration = $derived(() => {
+//   if (!job?.started_at) return null;
+//   const start = new Date(job.started_at);
+//   const end = job.finished_at ? new Date(job.finished_at) : new Date();
+//   const seconds = Math.round((end - start) / 1000);
   
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-});
+//   if (seconds < 60) return `${seconds}s`;
+//   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+//   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+// });
 
 const displayCommand = $derived(() => {
   if (!job?.command) return 'No command';
-  const maxLength = 60;
-  return job.command.length > maxLength
-    ? job.command.substring(0, maxLength) + '...'
-    : job.command;
+  const maxLength = 10;
+  const cmdStr = job.command.split(' ').slice(0, maxLength).join(' ');
+
+  return cmdStr;
 });
 
-const canRetry = $derived(['failed', 'error', 'canceled', 'cancelled'].includes(job?.status));
+// const StatusIcon = $derived(() => {
 
-const StatusIcon = $derived(() => {
+//   switch (job?.status) {
+//     case 'completed': return CheckCircle;
+//     case 'failed': return XCircle;
+//     default: return Clock;
+
+//   }
+// });
+// onMount(() => {
+//   status = getStatus();
+// });
+
+let used = false;
+function getStatus() {
+  if (used) return;
+  used = true;
   switch (job?.status) {
-    case 'completed': return CheckCircle;
-    case 'failed': return XCircle;
-    default: return Clock;
+    case 'completed': return 'success';
+    case 'failed': return 'error';
+    case 'running': return 'loading';
+    case 'pending': return 'pending';
+    default: return 'info';
   }
-});
+}
+let statusVar = getStatus();
 
-const statusVariant = $derived(() => {
-  switch (job?.status) {
-    case 'completed': return 'default';
-    case 'failed': return 'destructive';
-    default: 'secondary';
-  }
-});
+console.log("[Job.svelte] status:", job.status, statusVar);
 
 // Event handlers
 function handleViewLogs() {
   showLogModal = true;
-}
-
-// TODO: retry logic should not use jobService.createJob, but rather jobService.retryJob, which should call commandService.executeCommand
-async function handleRetry() {
-  if (!job) return;
-  try {
-    await jobService.createJob({
-      command: job.command,
-      vmId: job.vmId,
-      type: job.type
-    });
-  } catch (error) {
-    console.error('Failed to retry job:', error);
-  }
 }
 
 function formatTimestamp(timestamp) {
@@ -92,30 +94,32 @@ function formatTimestamp(timestamp) {
 </script>
 
 {#if job}
-  <Card class="transition-all duration-200">
-    <CardContent class="p-4">
-      <div class="flex items-start justify-between">
+  <Card class="transition-all duration-200 w-full">
+    <CardContent class="p-4 w-full">
+      <div class="flex items-start justify-between w-full">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-2">
-            <StatusIcon
+            <!-- <StatusIcon
               class="w-4 h-4 {job.status === 'completed' ? 'text-green-600' : job.status === 'failed' ? 'text-red-600' : 'text-yellow-600'}"
             />
-            <span class="font-medium truncate">{displayCommand}</span>
-            <StatusBadge status={statusVariant}>
+            -->
+            <!-- <span class="font-medium truncate">{displayCommand}</span> -->
+            <StatusBadge status={statusVar}>
               {job.status}
             </StatusBadge>
+            <!--
             {#if job.type}
               <Badge variant="outline" class="text-xs">
                 {job.type}
               </Badge>
-            {/if}
+            {/if} -->
           </div>
           
           <div class="text-sm text-muted-foreground space-y-1">
             <div>Started: {formatTimestamp(job.started_at)}</div>
-            {#if duration}
+            <!-- {#if duration}
               <div>Duration: {duration}</div>
-            {/if}
+            {/if} -->
             {#if job.error}
               <div class="text-red-600">Error: {job.error}</div>
             {/if}
@@ -137,16 +141,17 @@ function formatTimestamp(timestamp) {
           <Button variant="outline" size="sm" onclick={handleViewLogs}>
             <Eye class="w-3 h-3" />
           </Button>
-          {#if canRetry}
+          <!-- {#if canRetry}
             <Button variant="outline" size="sm" onclick={handleRetry}>
               <RotateCcw class="w-3 h-3" />
             </Button>
-          {/if}
+          {/if} -->
         </div>
       </div>
     </CardContent>
   </Card>
 
+  <!-- Self-contained CRUD modal -->
   <JobLogModal 
     {job} 
     isOpen={showLogModal} 
