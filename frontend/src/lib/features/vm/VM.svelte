@@ -10,15 +10,15 @@
   import { Button } from '$lib/components/lib/ui/button';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/lib/ui/card';
   import { Badge } from '$lib/components/lib/ui/badge';
-  import { Server, Edit, Settings, CheckCircle2 } from '@lucide/svelte';
+  import { Server, Eye, Settings, CheckCircle2 } from '@lucide/svelte';
   
   // state - global state access
   import { getSelectedVMId, getSelectedVM, selectVM } from '$lib/state/ui.state.svelte.js';
   import { getCommandStore } from '$lib/state/stores.state.svelte.js';
   import { startEdit } from '$lib/state/ui.state.svelte.js';
   
-  // crud components
-  import VmForm from '$lib/features/vm/crud/VMForm.svelte';
+  // view components
+  import VMView from '$lib/features/vm/VMView.svelte';
 
   // Props - ONLY identity data
   let { vm, size = null} = $props();
@@ -40,7 +40,7 @@
   );
   
   // Local UI state
-  let showVMForm = $state(false);
+  let showVMView = $state(false);
   let showCommandsModal = $state(false);
 
   // Computed
@@ -60,8 +60,8 @@
     selectVM(vm);
   }
   
-  function handleEdit() {
-    showVMForm = true;
+  function handleView() {
+    showVMView = true;
   }
 
   function handleManageCommands(e) {
@@ -120,8 +120,8 @@
         {commandCount} command{commandCount !== 1 ? 's' : ''}
       </div>
       <div class="flex gap-1">
-        <Button variant="ghost" size="sm" onclick={handleEdit}>
-          <Edit class="w-3 h-3" />
+        <Button variant="ghost" size="sm" onclick={handleView}>
+          <Eye class="w-3 h-3" />
         </Button>
         <Button variant="ghost" size="sm" onclick={handleManageCommands}>
           <!-- <Settings class="w-3 h-3" /> -->
@@ -132,4 +132,4 @@
   </Card>
 </div>
 
-<VmForm vm={vm} bind:isOpen={showVMForm} />
+<VMView {vm} bind:isOpen={showVMView} />

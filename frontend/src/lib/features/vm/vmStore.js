@@ -128,22 +128,24 @@ export function createVMStore(dependencies) {
     },
 
     /**
-     * Resolve VM by identifier (alias or UUID) - cache first, API fallback
+     * Resolve VM by identifier (ID or alias) - try ID first, then alias
      */
     async resolveVM(identifier, caller = "unknown") {
       if (!identifier) return null;
 
-      // 1. Try cache by alias
-      let vm = store.getState().vms.find((vm) => vm.alias === identifier);
+      // 1. Try cache by ID first
+      let vm = store.getState().vms.find((vm) => vm.id === identifier);
       if (vm) return vm;
 
-      // 2. Try cache by ID (if looks like UUID)
-      if (identifier.length > 10 && identifier.includes("-")) {
-        vm = store.getState().vms.find((vm) => vm.id === identifier);
-        if (vm) return vm;
-      }
+      // 2. Try cache by alias
+      vm = store.getState().vms.find((vm) => vm.alias === identifier);
+      if (vm) return vm;
 
-      // 3. Not found in cache - try API by alias
+      // 3. Not found in cache - try API by ID first
+      vm = await this.getVMById(identifier, caller);
+      if (vm) return vm;
+
+      // 4. Still not found - try API by alias
       return await this.getVMByAlias(identifier, caller);
     },
 
