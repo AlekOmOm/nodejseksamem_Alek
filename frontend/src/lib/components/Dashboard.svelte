@@ -9,13 +9,13 @@
 
 </script>
 
-<div class="h-screen flex flex-col bg-background dashboard-zoom">
+<div class="h-full w-full">
   <header class="border-b bg-card px-6 py-4 flex justify-between items-center">
     <h1 class="text-2xl font-bold">VM Orchestrator</h1>
     <ThemeToggle />
   </header>
 
-  <div class="flex-1 overflow-hidden flex">
+  <div class="h-full w-full bg-background flex">
     <Panel variant="sidebar">
       <VMManagementPanel/>
     </Panel>
