@@ -70,14 +70,16 @@
 
 </script>
 
-<div class="terminal-container ">
+<div class="terminal-container" class:min-h-30={isExecuting}>
+
   {#if logLines.length > 0}
-    <!-- button right side -->
-    <button onclick={clearLogs} >
-      <div class="broom-icon">
-        🧹
-      </div>
-    </button>
+    <div class="flex justify-end">
+      <button onclick={clearLogs} >
+        <div class="broom-icon">
+          🧹
+        </div>
+      </button>
+    </div>
   {/if}
 
   {#if isExecuting}
@@ -93,12 +95,12 @@
 
 <style>
   .terminal-container {
-    min-height: 20vh;
+    min-height: 10vh;
   }
   .broom-icon {
     padding: 0.5rem;
-    font-size: 2rem;    /* or 2rem, 3em, etc. */
+    font-size: 2rem;    
     display: inline-block;
-    line-height: 1;     /* avoids vertical alignment issues */
+    line-height: 1;     
   }
 </style>

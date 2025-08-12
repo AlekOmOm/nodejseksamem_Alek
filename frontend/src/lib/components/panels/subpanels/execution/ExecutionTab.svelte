@@ -23,20 +23,22 @@
 
 </script>
 
-<div class="flex flex-col h-full">
-  <div class="border-b flex-none min-h-[40vh]">
+<div class="h-full w-full flex flex-col overflow-y-auto">
+  <div class="h-full w-full border-b flex-1 overflow-y-auto pb-0">
     {#if !selectedVM}
       <div class="p-8 text-center text-muted-foreground">
         <h3 class="text-lg font-medium mb-2">Select a VM</h3>
         <p>Choose a virtual machine from the sidebar to view and manage commands.</p>
       </div>
     {:else if commands.length > 0}
-      <div class="p-4 space-y-3">
-        <div class="flex items-center justify-between">
+      <div class="h-full flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b">
           <h3 class="text-lg font-semibold">VM Commands</h3>
           <Button size="sm" onclick={() => showAddForm = true}>Add Command</Button>
         </div>
-        <VMCommands/>
+        <div class="flex-1 overflow-y-auto">
+          <VMCommands/>
+        </div>
       </div>
     {:else}
       <div class="p-8 text-center space-y-4">
@@ -48,7 +50,6 @@
       </div>
     {/if}
   </div>
-
-    <Terminal class="flex-1" />
+  <Terminal />
 </div>
 <AddCommandForm bind:isOpen={showAddForm} onclose={() => showAddForm = false} />
