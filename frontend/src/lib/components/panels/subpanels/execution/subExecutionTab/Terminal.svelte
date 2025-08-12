@@ -27,24 +27,20 @@
 
     // Listen for job logs - this is the key one!
     jobWebSocketService.onJobLog((logEntry) => {
-      console.log("🖥️ Terminal: Log received:", logEntry);
       logLines = [...logLines, {
         stream: logEntry.stream,
         data: logEntry.data,
         timestamp: logEntry.timestamp
       }];
-      console.log("🖥️ Terminal: Total logLines:", logLines.length);
     });
 
     // Listen for job completion
     jobWebSocketService.onJobCompleted((job) => {
-      console.log("🖥️ Terminal: Job completed:", job);
       isExecuting = false;
     });
 
     // Listen for job errors
     jobWebSocketService.onJobError((error) => {
-      console.log("🖥️ Terminal: Job error:", error);
       isExecuting = false;
     });
   });
@@ -74,17 +70,35 @@
 
 </script>
 
-<div class="terminal-container">
+<div class="terminal-container ">
   {#if logLines.length > 0}
     <!-- button right side -->
-    <button onclick={clearLogs} style="font-size: small; align:right;">clear logs</button>
-
+    <button onclick={clearLogs} >
+      <div class="broom-icon">
+        🧹
+      </div>
+    </button>
   {/if}
-  <Log {logLines} {className} class="min-h-[30vh]"/>
 
   {#if isExecuting}
-    <div class="text-sm text-gray-500 mt-2">
+    <div class="text-sm text-muted-foreground mt-2">
       Executing: {currentJob?.command}...
     </div>
   {/if}
+
+  <div class="scroll-box w-full h-full bg-background overflow-y-auto">
+    <Log {logLines} {className} class="w-full h-full"/>
+  </div>
 </div>
+
+<style>
+  .terminal-container {
+    min-height: 20vh;
+  }
+  .broom-icon {
+    padding: 0.5rem;
+    font-size: 2rem;    /* or 2rem, 3em, etc. */
+    display: inline-block;
+    line-height: 1;     /* avoids vertical alignment issues */
+  }
+</style>
