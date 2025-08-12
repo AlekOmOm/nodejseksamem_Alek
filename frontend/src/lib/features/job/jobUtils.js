@@ -7,34 +7,41 @@ dayjs.extend(relativeTime);
 
 export function formatDuration(startedAt, finishedAt = null) {
   if (!startedAt) return null;
-
-  const start = dayjs(startedAt);
-  const end = finishedAt ? dayjs(finishedAt) : dayjs();
-  const diff = end.diff(start);
-
-  return dayjs.duration(diff).humanize();
+  // precise duration in seconds without dayjs
+  const start = new Date(startedAt);
+  const end = finishedAt ? new Date(finishedAt) : new Date();
+  const diff = end.getTime() - start.getTime();
+  const seconds = diff / 1000;
+  return `${seconds.toFixed(2)}s`;
 }
 
 export function formatDurationPrecise(startedAt, finishedAt = null) {
   if (!startedAt) return null;
+  // precise duration in seconds without dayjs
+  const start = new Date(startedAt);
+  const end = finishedAt ? new Date(finishedAt) : new Date();
+  const diff = end.getTime() - start.getTime();
 
-  const start = dayjs(startedAt);
-  const end = finishedAt ? dayjs(finishedAt) : dayjs();
-  const diff = dayjs.duration(end.diff(start));
-
-  const hours = Math.floor(diff.asHours());
-  const minutes = diff.minutes();
-  const seconds = diff.seconds();
-
-  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-  if (minutes > 0) return `${minutes}m ${seconds}s`;
-  return `${seconds}s`;
+  return diff;
 }
 
 export function formatRelativeTime(timestamp) {
   if (!timestamp) return "Unknown";
+  // precise duration in seconds without dayjs
+  const start = new Date(timestamp);
+  const end = new Date();
+  const diff = end.getTime() - start.getTime();
+  const seconds = diff / 1000;
 
-  return dayjs(timestamp).fromNow();
+  if (seconds < 60) {
+    return `${seconds.toFixed(2)}s ago`;
+  } else if (seconds < 3600) {
+    return `${(seconds / 60).toFixed(0)}m ago`;
+  } else {
+    return `${(seconds / 3600).toFixed(0)}h ${((seconds % 3600) / 60).toFixed(
+      0
+    )}m ago`;
+  }
 }
 
 export function formatExitCode(exitCode) {
