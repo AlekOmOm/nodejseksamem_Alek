@@ -37,11 +37,11 @@ $effect(async () => {
 <Dialog bind:open={isOpen}>
   <DialogContent class="sm:min-w-2xl ">
     <div class="flex flex-col">
-      <div class="flex flex-row">
+      <div class="flex flex-row justify-between">
         <h3 class="text-lg font-semibold">
           Job Logs - {job?.commandName || job?.command?.slice(0, 50) || 'Unknown'}
         </h3>
-        <div class="flex justify-end">
+        <div class="flex justify-end pr-4">
           {#if logLines.length > 0}
             <Button variant="ghost" size="sm" onclick={() => copyToClipboard(logLines.map(line => line.data).join('\n'), 'Log')}>
               <Copy class="w-3 h-3" />
