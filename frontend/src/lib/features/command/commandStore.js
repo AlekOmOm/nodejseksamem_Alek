@@ -1,6 +1,7 @@
 /* src/lib/stores/commandStore.js */
 import { createCRUDStore } from "$lib/core/stores/crudStore.js";
 import { getVMStore } from "$lib/state/stores.state.svelte.js";
+import { refresh } from "$lib/state/ui.state.svelte.js";
 
 /* initial shape --------------------------------------------------- */
 const initialState = {
@@ -14,7 +15,7 @@ const initialState = {
 
 /* store factory -------------------------------------------------- */
 export function createCommandStore(dependencies) {
-  const { commandService, commandExecutor } = dependencies;
+  const { commandService } = dependencies;
   const store = createCRUDStore(initialState);
 
   return {
@@ -121,12 +122,16 @@ export function createCommandStore(dependencies) {
             },
           };
         });
+        await refresh();
         return newCommand;
       } catch (error) {
         console.error("Failed to create command:", error);
-        
+
         // Re-throw with preserved error message for toast handling
-        const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Unknown error occurred";
         const enhancedError = new Error(errorMessage);
         enhancedError.status = error.response?.status;
         throw enhancedError;
@@ -160,6 +165,7 @@ export function createCommandStore(dependencies) {
             commandsByVM: commandsByVMUpdated,
           };
         });
+        await refresh();
 
         return updatedCommand;
       } catch (error) {
@@ -192,18 +198,11 @@ export function createCommandStore(dependencies) {
             commandsByVM: commandsByVMUpdated,
           };
         });
+        await refresh();
       } catch (error) {
         console.error("❌ CommandStore: Failed to delete command:", error);
         throw error;
       }
-    },
-
-    /* ───────── execution delegation to CommandExecutor ───────── */
-    async executeCommand(selectedVM, command, options = {}) {
-      if (!commandExecutor) {
-        throw new Error("CommandExecutor not available");
-      }
-      return await commandExecutor.executeCommand(selectedVM, command, options);
     },
 
     /**

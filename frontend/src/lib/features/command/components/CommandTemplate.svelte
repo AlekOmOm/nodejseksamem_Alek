@@ -22,9 +22,10 @@
   </CardHeader>
   <CardContent class="pt-0">
     {#if template.description}
-      <p class="text-sm text-gray-600 mb-2">{template.description}</p>
+      <p class="text-sm text-muted-foreground mb-2">{template.description}</p>
     {/if}
-    <code class="text-xs bg-gray-100 px-2 py-1 rounded block truncate">
+
+    <code class="text-xs text-sm text-muted-foreground px-2 py-1 rounded block truncate border border-gray-200">
       {template.cmd}
     </code>
   </CardContent>

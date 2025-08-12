@@ -56,6 +56,9 @@ let _editingCommand = $state(null);
 // Add this new reactive state for recent VMs
 let _recentVMOrder = $state([]); // Array of VM aliases in recent order
 
+// Global refresh state
+let _refreshTrigger = $state(0); // Increment to trigger refresh
+
 /* ── public read-only accessors ── */
 // selectedVM
 
@@ -81,12 +84,8 @@ function setSelectedVM(vm, caller = "unknown") {
   // Persist to localStorage
   if (vm) {
     localStorage.setItem("lastSelectedVM", JSON.stringify(vm));
-    console.log(
-      `🔄 [UI State] Selected VM saved to localStorage: ${vm.alias || vm.id}`
-    );
   } else {
     localStorage.removeItem("lastSelectedVM");
-    console.log("🔄 [UI State] Selected VM cleared from localStorage");
   }
 
   // Load jobs when component mounts or VM changes
@@ -145,6 +144,16 @@ export function getRecentVMOrder() {
   return _recentVMOrder;
 }
 
+// Global refresh trigger accessor
+export function getRefreshTrigger() {
+  return _refreshTrigger;
+}
+
+// Trigger refresh for all components
+export function triggerRefresh() {
+  _refreshTrigger += 1;
+}
+
 /* ── public actions that mutate state ── */
 // select functions
 
@@ -195,6 +204,10 @@ function _setSelectedVMJobs(jobs) {
 }
 function _setSelectedVMCommands(commands) {
   _selectedVMCommands = commands;
+}
+
+export async function refresh() {
+  selectVM(getSelectedVM());
 }
 // ---
 
