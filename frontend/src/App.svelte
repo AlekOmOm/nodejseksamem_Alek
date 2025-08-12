@@ -3,6 +3,7 @@
   import LoginForm from '$lib/components/lib/ui/LoginForm.svelte';
   import RegisterForm from '$lib/components/lib/ui/RegisterForm.svelte';
   import LogoutButton from '$lib/components/lib/ui/LogoutButton.svelte';
+  import { Toaster } from 'svelte-sonner';
   import './styles/styles.css';
   import { initializeStoresData } from '$lib/state/stores.state.svelte.js';
   import { initializedUIState, selectVM } from '$lib/state/ui.state.svelte.js';
@@ -23,7 +24,6 @@
       
       // If user is already authenticated after validation, initialize services
       if (getIsAuthenticated()) {
-        console.log("🔄 [App.svelte] User already authenticated, initializing services...");
         await handleAuthSuccess();
       }
       
@@ -35,35 +35,25 @@
   });
   async function handleAuthSuccess() {
     try {
-      console.log("🎉 [App.svelte] Auth successful, initializing services...");
-      
       await initializeServices();
       await initializeStoresData();
       
       const vmStore = getVMStore();
       if (vmStore && vmStore.isInitialized()) {
         const loadedVMs = vmStore.getVMs();
-        console.log("📊 [App.svelte] Loaded VMs:", loadedVMs?.length || 0);
         
         if (loadedVMs && loadedVMs.length > 0) {
           await initializedUIState(loadedVMs);
           await selectVM(loadedVMs[0]);
-          console.log("✅ [App.svelte] UI state initialized with VM:", loadedVMs[0]?.alias);
-        } else {
-          console.log("⚠️ [App.svelte] No VMs available after initialization");
-        }
+        } 
       } else {
-        console.log("❌ [App.svelte] VMStore not initialized after data loading");
-        
         // Force VM loading if store exists but not initialized
         if (vmStore) {
-          console.log("🔄 [App.svelte] Force loading VMs...");
           try {
             const vms = await vmStore.loadVMs(true);
             if (vms && vms.length > 0) {
               await initializedUIState(vms);
               await selectVM(vms[0]);
-              console.log("✅ [App.svelte] Force loaded VMs:", vms.length);
             }
           } catch (error) {
             console.error("❌ [App.svelte] Force VM loading failed:", error);
@@ -76,11 +66,10 @@
   }
 
 </script>
-
-<main class="min-h-screen bg-background text-foreground">
+<main class="h-[90vh] bg-background text-foreground">
   {#if ready}
     {#if isAuthenticated}
-      <div class="p-4">
+      <div class="p-4 h-full w-full">
         <div class="flex justify-between items-center mb-4">
           <h1 class="text-2xl font-bold">VM Orchestrator</h1>
           <LogoutButton />
@@ -114,3 +103,11 @@
     </div>
   {/if}
 </main>
+
+<!-- Centralized toast placement -->
+<Toaster 
+  richColors 
+  position="top-right" 
+  closeButton 
+  duration={4000}
+/>
