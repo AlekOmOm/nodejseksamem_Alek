@@ -27,9 +27,10 @@ let { command } = $props();
 const commandExecutor = getService('commandExecutor');
 const currentCommand = $derived(commandExecutor.getCurrentCommand());
 const isCurrentCommand = $derived(currentCommand?.cmd === command.cmd);
+
 </script>
 
-<Card class="w-full max-w-[320px] transition-all duration-200 {isCurrentCommand ? 'ring-2 ring-orange-500 border-orange-500' : 'hover:shadow-md'}">
+<Card class="w-full max-w-[320px] min-h-[15vh] transition-all duration-200 {isCurrentCommand ? 'ring-2 ring-orange-500 border-orange-500' : 'hover:shadow-md'}">
   <CardHeader class="pb-2 w-full">
     <div class="flex items-start justify-between w-full max-w-full overflow-hidden">
       <div class="flex items-center gap-3">
@@ -48,26 +49,34 @@ const isCurrentCommand = $derived(currentCommand?.cmd === command.cmd);
     </div>
   </CardHeader>
 
-  <CardContent class="space-y-2">
-    {#if command.description}
-      <p class="text-sm text-muted-foreground">{command.description}</p>
-    {/if}
+  <CardContent class="flex flex-col flex-1 overflow-y-auto">
+    <!-- content  -->
+    <div class="flex-1 overflow-y-auto">
+      {#if command.description}
+        <p class="text-sm text-muted-foreground">{command.description}</p>
+      {/if}
 
-    {#if command.cmd.length > 50}
-      <details class="text-xs">
-        <summary class="cursor-pointer text-muted-foreground hover:text-foreground">View full command</summary>
-        <pre class="mt-2 p-2 bg-muted rounded text-xs font-mono whitespace-pre-wrap break-all">{command.cmd}</pre>
-      </details>
-    {/if}
+      <div class="terminal-background p-1 mt-2 rounded-md">
+      {#if command.cmd.length > 50}
+        <details class="text-xs">
+          <summary class="cursor-pointer text-muted-foreground hover:text-foreground">View full command</summary>
+          <pre class="mt-2 p-2 bg-muted rounded text-xs font-mono whitespace-pre-wrap break-all"> > {command.cmd}</pre>
+        </details>
+      {:else}
+          <pre class="mt-2 p-2 bg-muted rounded text-xs font-mono whitespace-pre-wrap break-all"> > {command.cmd}</pre> 
+        {/if}
+      </div>
 
-    <div class="flex items-center justify-between text-xs text-muted-foreground">
-      <div class="flex items-center gap-2">
-        <span>Created: {command.createdAt || 'Unknown'}</span>
-        <span class="capitalize">{typeConfig[command.type]?.label || command.type}</span>
+      <div class="flex items-center justify-between text-xs text-muted-foreground">
+        <div class="flex items-center gap-2">
+          <span>Created: {command.createdAt || 'Unknown'}</span>
+          <span class="capitalize">{typeConfig[command.type]?.label || command.type}</span>
+        </div>
       </div>
     </div>
 
-    <div class="flex gap-2 pt-2 border-t">
+    <!-- buttons -->
+    <div class="flex gap-2 pt-2 border-t flex-shrink-0 mt-auto">
       <ExecuteButton {command} />
       <EditButton {command} />
       <DeleteButton {command} />
