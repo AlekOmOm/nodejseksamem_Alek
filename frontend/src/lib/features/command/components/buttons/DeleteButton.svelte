@@ -2,6 +2,8 @@
 import { Button } from '$lib/components/lib/ui/button';
 import { Trash2 } from '@lucide/svelte';
 
+import { toastActions } from '$lib/stores/toast.store.svelte.js'; 
+
 // state - global state access
 import { getCommandStore } from '$lib/state/stores.state.svelte.js';
 import { startDeleteCommand } from '$lib/state/ui.command.state.svelte.js';
@@ -24,18 +26,15 @@ function handleDelete(event) {
 // Self-contained confirm delete handler
 async function handleConfirmDelete() {
   try {
-    console.log('🗑️ DeleteButton: Deleting command:', command.name);
-    console.log('🗑️ DeleteButton: CommandStore available methods:', Object.keys(commandStore));
-    
     if (!commandStore.deleteCommand) {
       throw new Error('deleteCommand method not available on commandStore');
     }
     
     await commandStore.deleteCommand(command.id);
-    console.log('✅ DeleteButton: Command deleted successfully');
+    toastActions.command.deleted(command.name);
+
   } catch (error) {
-    console.error('❌ DeleteButton: Failed to delete command:', error);
-    throw error;
+    toastActions.command.error('delete', error);
   }
 }
 </script>

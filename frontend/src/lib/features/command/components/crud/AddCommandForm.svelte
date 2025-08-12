@@ -15,6 +15,7 @@
   import { Label as FormLabel } from '$lib/components/lib/ui/label';
   import { getSelectedVM, getSelectedTemplateCmd } from '$lib/state/ui.state.svelte.js';
   import { getCommandStore } from '$lib/state/stores.state.svelte.js';
+  import { toastActions } from '$lib/stores/toast.store.svelte.js';
 
   // Props
   let { 
@@ -56,7 +57,7 @@
     timeout: 30000
   });
   let isSubmitting = $state(false);
-  let errorMessage = $state('');
+  let errorMessages = $state([]);
 
   function sanitizeCommand(cmd) {
     return cmd.split(/\r?\n/).map(line => line.trim()).filter(Boolean).join(' ').trim();
@@ -64,20 +65,19 @@
 
   $effect(() => {
     if (selectedTemplateCmd) {
-      formData = {
-        name: selectedTemplateCmd.name,
-        cmd: selectedTemplateCmd.cmd,
-        type: selectedTemplateCmd.type,
-        description: selectedTemplateCmd.description,
+      //const templateSnapshot = $state.snapshot(selectedTemplateCmd);
+      
+      const newFormData = {
+        name: selectedTemplateCmd.name || '',
+        cmd: selectedTemplateCmd.cmd || '',
+        type: selectedTemplateCmd.type || 'ssh',
+        description: selectedTemplateCmd.description || '',
         timeout: selectedTemplateCmd.timeout || 30000
       };
+      
+      formData = newFormData;
     }
   });
-
-  const isFormValid = $derived(
-    formData.name.trim().length > 0 && 
-    formData.cmd.trim().length > 0
-  );
 
   function resetForm() {
     formData = {
@@ -87,19 +87,14 @@
       description: '',
       timeout: 30000
     };
-    errorMessage = '';
+    errorMessages = [];
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!isFormValid) {
-      errorMessage = 'Name and command are required';
-      return;
-    }
-
     isSubmitting = true;
-    errorMessage = '';
+    errorMessages = [];
 
     try {
       const commandData = {
@@ -111,17 +106,13 @@
       };
 
       await commandStore.createCommand(selectedVM.id, commandData);
-
+      toastActions.command.created(commandData.name, selectedVM.name);
+      
       resetForm();
       onclose();
-    } catch (error) {
-      console.error('Failed to create command:', error);
       
-      if (error.message.includes('409') || error.message.includes('Conflict')) {
-        errorMessage = 'A command with this name already exists. Please choose a different name.';
-      } else {
-        errorMessage = error.message || 'Failed to create command';
-      }
+    } catch (error) {
+      toastActions.command.error('create', error);
     } finally {
       isSubmitting = false;
     }
@@ -136,7 +127,12 @@
 <Dialog bind:open={isOpen} class="overflow-y-auto max-w-[90vw]" >
   <DialogContent class="sm:max-w-4xl max-h-[80vh] max-w-[90vw]">
     <DialogHeader>
-      <DialogTitle>Add New Command</DialogTitle>
+      <DialogTitle>
+        Add New Command
+        <span class="text-sm text-muted-foreground ml-2">
+          {selectedVM?.name}
+        </span>
+      </DialogTitle>
     </DialogHeader>
     
     <div class="flex h-[60vh] gap-4 overflow-y-auto">
@@ -171,7 +167,7 @@
             />
           </div>
 
-          <div class="input-group"dd>
+          <div class="input-group">
             <FormLabel for="cmd">Command *</FormLabel>
             <Textarea
               id="cmd"
@@ -216,9 +212,13 @@
             />
           </div>
 
-          {#if errorMessage}
+          {#if errorMessages.length > 0}
             <div class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-              {errorMessage}
+              <ul class="list-disc list-inside space-y-1">
+                {#each errorMessages as error}
+                  <li>{error}</li>
+                {/each}
+              </ul>
             </div>
           {/if}
 
@@ -226,7 +226,7 @@
             <Button type="button" variant="outline" onclick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !isFormValid}>
+            <Button type="submit" disabled={isSubmitting}>
               {#if isSubmitting}
                 <Loader2 class="w-4 h-4 animate-spin mr-2" />
               {:else}
@@ -240,8 +240,3 @@
     </div>
   </DialogContent>
 </Dialog>
-
-<style>
-  .input-group {
-  }
-</style>
