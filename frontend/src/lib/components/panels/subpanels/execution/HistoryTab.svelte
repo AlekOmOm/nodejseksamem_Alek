@@ -27,7 +27,7 @@ const jobs = $derived(getSelectedVMJobs());
       </CardContent>
     </Card>
   {:else}
-    <div class="space-y-3 w-full">
+    <div class="space-y-3 w-full flex flex-col items-center">
       <div class="text-sm text-muted-foreground">
         {jobs.length} job{jobs.length === 1 ? '' : 's'}
         {#if selectedVM}

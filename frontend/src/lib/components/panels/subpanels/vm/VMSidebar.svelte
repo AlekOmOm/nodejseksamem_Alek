@@ -5,10 +5,13 @@
 <script>
   import VM from '$lib/features/vm/VM.svelte';
   import { getVMStore } from '$lib/state/stores.state.svelte.js';
-  import { getRecentVMs, getSelectedVM, getRecentVMOrder } from '$lib/state/ui.state.svelte.js';
+  import { getRecentVMs, getSelectedVM, getRecentVMOrder, getRefreshTrigger } from '$lib/state/ui.state.svelte.js';
 
   const selectedVM = $derived(getSelectedVM());
   const vmStore = $derived(getVMStore());
+  const refreshTrigger = $derived(getRefreshTrigger()); // Listen to refresh
+  
+  // Reactive data that refreshes when refreshTrigger changes
   const vms = $derived(vmStore?.getVMs() || []);
   const loading = $derived(vmStore?.getLoading() || false);
   const initialized = $derived(vmStore?.isInitialized() || false);
@@ -16,6 +19,13 @@
   
   // Track recent order reactively
   const recentOrder = $derived(getRecentVMOrder());
+  
+  // Log when refresh triggers (for debugging)
+  $effect(() => {
+    if (refreshTrigger > 0) {
+      console.log('🔄 [VMSidebar] Refresh triggered, VMs:', vms.length);
+    }
+  });
   
   // Sort VMs based on recent order - will update when recentOrder changes
   const sortedVMs = $derived(

@@ -6,7 +6,7 @@
   import { Toaster } from 'svelte-sonner';
   import './styles/styles.css';
   import { initializeStoresData } from '$lib/state/stores.state.svelte.js';
-  import { initializedUIState, selectVM } from '$lib/state/ui.state.svelte.js';
+  import { initializedUIState, selectVM, triggerRefresh } from '$lib/state/ui.state.svelte.js';
   import { getVMStore } from '$lib/state/stores.state.svelte.js';
   import { getIsAuthenticated, initializeAuth } from '$lib/state/auth.state.svelte.js';
   import { onMount } from 'svelte';
@@ -28,9 +28,11 @@
       }
       
       ready = true;
+      triggerRefresh(); // Notify components to refresh from cache
     } catch (error) {
       console.error("❌ [App.svelte] Auth initialization failed:", error);
       ready = true; 
+      triggerRefresh(); // Notify components even on error
     }
   });
   async function handleAuthSuccess() {
