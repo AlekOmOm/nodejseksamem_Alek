@@ -97,6 +97,7 @@ deploy-serverless:
 db-inspect:
 	@echo "🔍 Inspecting database schema..."
 	@docker exec -it $(DB_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "\d jobs"
+	@docker exec -it $(DB_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "\d jobs.count"
 
 .PHONY: db-shell
 db-shell:
@@ -126,3 +127,10 @@ db-init:
 	@echo "debug db-init, vars: $(DB_CONTAINER_NAME), $(POSTGRES_USER), $(POSTGRES_DB)"
 	@docker exec -i $(DB_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) < db/database.sql
 	@echo "✅ Database initialized"
+
+.PHONY: db-count
+db-count:
+	@echo "📊 Counting database records..."
+	@docker exec -it $(DB_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "SELECT 'jobs' as table_name, COUNT(*) as count FROM jobs;"
+	@docker exec -it $(DB_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "SELECT 'job_logs' as table_name, COUNT(*) as count FROM job_logs;"
+	@docker exec -it $(DB_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "SELECT 'users' as table_name, COUNT(*) as count FROM users;"
