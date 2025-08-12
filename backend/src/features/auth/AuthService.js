@@ -53,4 +53,35 @@ export default class AuthService {
     }
     return user;
   }
+
+  async deleteUser(userId) {
+    const deletedUser = await this.repo.deleteUser(userId);
+    if (!deletedUser) {
+      throw new Error("User not found");
+    }
+    return deletedUser;
+  }
+
+  async deleteAllUserData(userId) {
+    // Import needed services
+    const { vmsService } = await import('../vms/VMsService.js');
+    const { commandsService } = await import('../commands/CommandsService.js');
+    
+    try {
+      // Delete user's VMs and commands from DynamoDB
+      await vmsService.deleteAllUserVMs(userId);
+      await commandsService.deleteAllUserCommands(userId);
+      
+      // Delete user and all PostgreSQL data (jobs, logs)
+      const deletedUser = await this.repo.deleteUserWithAllData(userId);
+      if (!deletedUser) {
+        throw new Error("User not found");
+      }
+      
+      return deletedUser;
+    } catch (error) {
+      console.error('Error deleting all user data:', error);
+      throw error;
+    }
+  }
 }

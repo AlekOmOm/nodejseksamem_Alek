@@ -4,6 +4,7 @@
   import { Input } from "$lib/components/lib/ui/input/index.js";
   import { Label } from "$lib/components/lib/ui/label/index.js";
   import { getService } from "$lib/core/ServiceContainer.js";
+  import { toastActions } from "$lib/stores/toast.store.svelte.js";
   const authService = getService("authService");
 
   let { onSuccess = () => {} } = $props();
@@ -19,10 +20,13 @@
     error = '';
 
     try {
+      console.log('login', email, password);
       await authService.login(email, password);
+      toastActions.auth.loginSuccess(email);
       onSuccess();
     } catch (err) {
       error = err.message || 'Login failed';
+      toastActions.auth.loginError(err);
     } finally {
       loading = false;
     }

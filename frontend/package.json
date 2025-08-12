@@ -12,15 +12,19 @@
     "node": ">=20.19 || >=22.12"
   },
   "devDependencies": {
+    "@internationalized/date": "^3.8.2",
     "@lucide/svelte": "^0.515.0",
     "@sveltejs/vite-plugin-svelte": "^6.1.0",
     "@tailwindcss/vite": "^4.1.11",
     "@testing-library/svelte": "^5.2.8",
     "bits-ui": "^2.8.12",
+    "depcheck": "^1.4.7",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "jsdom": "^26.1.0",
     "svelte": "^5.37.2",
     "tailwind-variants": "^1.0.0",
     "tailwindcss": "^4.1.11",
+    "ts-prune": "^0.10.3",
     "vite": "^7.0.0",
     "vitest": "^3.2.4"
   },

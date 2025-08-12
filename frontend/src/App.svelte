@@ -11,7 +11,7 @@
   import { getIsAuthenticated, initializeAuth } from '$lib/state/auth.state.svelte.js';
   import { onMount } from 'svelte';
   import { initializeAuthServices, initializeServices } from '$lib/core/ServiceContainer.js';
-
+  import Avatar from '$lib/features/auth/Avatar.svelte';
   let ready = $state(false);
   let showRegister = $state(false);
 
@@ -74,7 +74,10 @@
       <div class="p-4 h-full w-full">
         <div class="flex justify-between items-center mb-4">
           <h1 class="text-2xl font-bold">VM Orchestrator</h1>
-          <LogoutButton />
+          <div class="flex items-center gap-2">
+            <Avatar />
+            <LogoutButton />
+          </div>
         </div>
         <Dashboard />
       </div>

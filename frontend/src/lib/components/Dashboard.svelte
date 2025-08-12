@@ -2,7 +2,6 @@
   // ui
   import Panel from '$lib/components/lib/ui/Panel.svelte';
   import ThemeToggle from '$lib/components/lib/ui/ThemeToggle.svelte';
-
   // components
   import VMManagementPanel from '$lib/components/panels/VMManagementPanel.svelte';
   import ExecutionPanel from '$lib/components/panels/ExecutionPanel.svelte';

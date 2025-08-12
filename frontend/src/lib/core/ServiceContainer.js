@@ -11,7 +11,7 @@ import { ApiClient } from "$lib/core/clients/ApiClient.js";
 import { WebSocketClient } from "$lib/core/clients/WebSocketClient.js";
 import { JobWebSocketService } from "$lib/core/clients/websocket/JobWebSocketService.js";
 // features
-import { AuthService } from "$lib/features/auth/auth.js";
+import { createAuthService } from "$lib/features/auth/auth.js";
 import { VMService } from "$lib/features/vm/VMService.js";
 
 import { CommandService } from "$lib/features/command/CommandService.js";
@@ -70,9 +70,8 @@ export class ServiceContainer {
       (c) => new LogService(c.get("apiClient"))
     );
     // auth
-    this.registerSingleton(
-      "authService",
-      (c) => new AuthService(c.get("apiClient"))
+    this.registerSingleton("authService", (c) =>
+      createAuthService(c.get("apiClient"))
     );
 
     this.registerSingleton("commandExecutor", (c) => new CommandExecutor());
@@ -140,9 +139,8 @@ export class ServiceContainer {
   async initializeAuth() {
     if (this.authInitialized) return;
     this.registerSingleton("apiClient", () => new ApiClient());
-    this.registerSingleton(
-      "authService",
-      (c) => new AuthService(c.get("apiClient"))
+    this.registerSingleton("authService", (c) =>
+      createAuthService(c.get("apiClient"))
     );
 
     this.authInitialized = true;

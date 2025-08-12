@@ -83,6 +83,12 @@ class VMsService {
 
     return null;
   }
+
+  // ── User Data Deletion ──────────────────────────────────────────────────
+
+  async deleteAllUserVMs(userId) {
+    return await this.repo.deleteAllUserVMs(userId);
+  }
 }
 
 export const vmsService = new VMsService();

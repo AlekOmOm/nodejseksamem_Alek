@@ -5,6 +5,7 @@ import { createCommandStore } from "$lib/features/command/commandStore.js";
 import { createJobStore } from "$lib/features/job/jobStore.js";
 import { createLogStore } from "$lib/features/log/logStore.js";
 import { attachStores } from "$lib/state/ui.state.svelte.js";
+import { refresh } from "$lib/state/ui.state.svelte.js";
 
 /* ── private reactive fields ── */
 let _vmStore = $state(null);
@@ -156,6 +157,7 @@ export async function initializeStoresData() {
       }
     }
 
+    await refresh();
     console.log("✅ Store data initialized");
   })();
   return dataInitPromise;

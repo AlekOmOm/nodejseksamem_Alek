@@ -54,7 +54,7 @@ export function createAuthRouter() {
       return sendSuccess(res, user);
     } catch (error) {
       if (error.message === "Invalid credentials") {
-        return sendUnauthorized(res, "Invalid credentials");
+        return sendUnauthorized(res, "Email or password is incorrect. Please try again.");
       }
       if (error.name === "ValiError") {
         const validationMessage = error.issues
@@ -62,7 +62,7 @@ export function createAuthRouter() {
           .join(", ");
         return sendUnprocessableEntity(res, validationMessage);
       }
-      return sendInternalServerError(res, error.message);
+      return sendInternalServerError(res, "Login failed. Please try again.");
     }
   });
 
@@ -83,6 +83,48 @@ export function createAuthRouter() {
     } catch (error) {
       if (error.message === "User not found") {
         return sendUnauthorized(res, "Invalid session");
+      }
+      return sendInternalServerError(res, error.message);
+    }
+  });
+
+  router.delete("/user", isAuthenticated, async (req, res) => {
+    try {
+      const deletedUser = await service.deleteUser(req.user.id);
+      
+      // Destroy session after successful deletion
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+        }
+        res.clearCookie("connect.sid");
+      });
+      
+      return sendSuccess(res, { message: "User deleted successfully", user: deletedUser });
+    } catch (error) {
+      if (error.message === "User not found") {
+        return sendUnauthorized(res, "User not found");
+      }
+      return sendInternalServerError(res, error.message);
+    }
+  });
+
+  router.delete("/user/all-data", isAuthenticated, async (req, res) => {
+    try {
+      const deletedUser = await service.deleteAllUserData(req.user.id);
+      
+      // Destroy session after successful deletion
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+        }
+        res.clearCookie("connect.sid");
+      });
+      
+      return sendSuccess(res, { message: "All user data deleted successfully", user: deletedUser });
+    } catch (error) {
+      if (error.message === "User not found") {
+        return sendUnauthorized(res, "User not found");
       }
       return sendInternalServerError(res, error.message);
     }

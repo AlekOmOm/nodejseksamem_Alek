@@ -78,13 +78,26 @@ export class AuthService {
    }
 
    // GDPR delete user
-   async deleteUser(id) {
+   async deleteUser() {
       if (!getIsAuthenticated()) {
          throw new Error("User not authenticated");
       }
 
-      const response = await this.api.delete(`${this.ENDPOINT}/${id}`);
-      if (response.status === 200) {
+      const response = await this.api.delete(`${this.ENDPOINT}/user`);
+      if (response && response.message) {
+         logout();
+      }
+      return response;
+   }
+
+   // Delete all user data (VMs, Commands, Jobs, User)
+   async deleteAllUserData() {
+      if (!getIsAuthenticated()) {
+         throw new Error("User not authenticated");
+      }
+
+      const response = await this.api.delete(`${this.ENDPOINT}/user/all-data`);
+      if (response && response.message) {
          logout();
       }
       return response;

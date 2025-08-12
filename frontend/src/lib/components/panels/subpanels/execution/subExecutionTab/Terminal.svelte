@@ -55,12 +55,10 @@
   });
 
   const selectedVM = $derived(getSelectedVM());
-  let prevSelectedVM = null;
 
   $effect(() => {
-    if (selectedVM !== prevSelectedVM) {
+    if (selectedVM) {
       logLines = [];
-      prevSelectedVM = selectedVM;
     }
   });
 

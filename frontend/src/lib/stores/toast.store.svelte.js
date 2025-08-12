@@ -42,6 +42,31 @@ export const toastActions = {
     }
   },
 
+  // Auth operations
+  auth: {
+    loginSuccess: (email) => toast.success(`Welcome back!`, {
+      description: `Logged in as ${email}`
+    }),
+    loginError: (error) => toast.error('Login failed', {
+      description: error.message || 'Please check your credentials and try again.'
+    }),
+    registerSuccess: (email) => toast.success(`Account created successfully!`, {
+      description: `Welcome ${email}! You can now log in.`
+    }),
+    registerError: (error) => toast.error('Registration failed', {
+      description: error.message || 'Please check your details and try again.'
+    }),
+    userDeleted: () => toast.success('Account deleted successfully', {
+      description: 'Your account has been permanently deleted.'
+    }),
+    allDataDeleted: () => toast.success('All data deleted successfully', {
+      description: 'Your account and all associated data have been permanently deleted.'
+    }),
+    deletionError: (error) => toast.error('Deletion failed', {
+      description: error.message || 'Please try again or contact support.'
+    })
+  },
+
   // Generic operations
   success: (message, description) => toast.success(message, { description }),
   error: (message, description) => toast.error(message, { description }),

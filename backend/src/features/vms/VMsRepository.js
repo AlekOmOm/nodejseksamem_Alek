@@ -84,4 +84,15 @@ export class VMsRepository {
       body: JSON.stringify(commandData),
     });
   }
+
+  /**
+   * Delete all VMs for a user (for GDPR compliance)
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
+  async deleteAllUserVMs(userId) {
+    return await this.api.request(`${this.BASE_ENDPOINT}/user/${userId}`, {
+      method: "DELETE",
+    });
+  }
 }

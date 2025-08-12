@@ -16,6 +16,10 @@ class CommandsService {
   async deleteCommand(id) {
     return await this.repo.deleteCommand(id);
   }
+
+  async deleteAllUserCommands(userId) {
+    return await this.repo.deleteAllUserCommands(userId);
+  }
 }
 
 export const commandsService = new CommandsService(new CommandsRepository());

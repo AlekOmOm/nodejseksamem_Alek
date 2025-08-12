@@ -41,4 +41,15 @@ export class CommandsRepository {
       method: "DELETE",
     });
   }
+
+  /**
+   * Delete all commands for a user (for GDPR compliance)
+   * @param {string} userId - User ID
+   * @returns {Promise<void>}
+   */
+  async deleteAllUserCommands(userId) {
+    return await this.api.request(`${this.BASE_ENDPOINT}/user/${userId}`, {
+      method: "DELETE",
+    });
+  }
 }

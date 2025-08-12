@@ -41,6 +41,7 @@ let _selectedTemplateCmd = $state(null);
 let _logLines = $state([]);
 let _currentJob = $state(null);
 let _latestJob = $state(null);
+let _sortedVMs = $state([]);
 
 // vm being edited
 let _editingVM = $state(null);
@@ -53,17 +54,22 @@ let _isEditingVMCommands = $state(false);
 let _selectedCommand = $state(null);
 let _editingCommand = $state(null);
 
-// Add this new reactive state for recent VMs
-let _recentVMOrder = $state([]); // Array of VM aliases in recent order
+// Recent VMs state - simple array of VM aliases in recent order
+let _recentVMs = $state([]); // Array of VM aliases in recent order
 
 // Global refresh state
 let _refreshTrigger = $state(0); // Increment to trigger refresh
+let _isUIInitialized = $state(false); // Track UI initialization status
 
 /* ── public read-only accessors ── */
 // selectedVM
 
 export function getSelectedVM() {
   return _selectedVM;
+}
+
+export function getIsUIInitialized() {
+  return _isUIInitialized;
 }
 // selectedVMId
 export function getSelectedVMId() {
@@ -139,9 +145,55 @@ export function setCurrentJob(job) {
   _currentJob = job;
 }
 
-// Add new accessor for recent VM order
-export function getRecentVMOrder() {
-  return _recentVMOrder;
+// Accessor for recent VMs
+export function getRecentVMs() {
+  return _recentVMs;
+}
+
+// Get sorted VMs based on recency - reactive (pure getter)
+export function getSortedVMs() {
+  // Always try to get fresh VMs from store for fallback computation
+  const allVMs = _vmStore?.getVMs() || [];
+
+  console.log(
+    "[getSortedVMs] Called - _vmStore:",
+    !!_vmStore,
+    "_sortedVMs.length:",
+    _sortedVMs?.length || 0,
+    "allVMs.length:",
+    allVMs.length,
+    "_storesAttached:",
+    _storesAttached
+  );
+
+  // If we have cached sorted VMs and they match the current VM count, return them
+  if (
+    _sortedVMs &&
+    _sortedVMs.length > 0 &&
+    _sortedVMs.length === allVMs.length
+  ) {
+    console.log("[getSortedVMs] Returning cached _sortedVMs");
+    return _sortedVMs;
+  }
+
+  // Fallback: compute on-the-fly without mutating state
+  if (allVMs.length > 0) {
+    console.log("[getSortedVMs] Computing fallback sorted VMs");
+    const sorted = getSortedVMsByRecency(allVMs);
+    console.log(
+      "[getSortedVMs] Computed fallback result length:",
+      sorted.length
+    );
+    return sorted;
+  }
+
+  console.log(
+    "[getSortedVMs] Returning empty array - _vmStore exists:",
+    !!_vmStore,
+    "stores attached:",
+    _storesAttached
+  );
+  return [];
 }
 
 // Global refresh trigger accessor
@@ -154,6 +206,28 @@ export function triggerRefresh() {
   _refreshTrigger += 1;
 }
 
+// Update sorted VMs (called internally by effects)
+function updateSortedVMs() {
+  if (!_vmStore) {
+    console.log("[updateSortedVMs] No _vmStore available");
+    return;
+  }
+
+  const allVMs = _vmStore.getVMs() || [];
+  console.log("[updateSortedVMs] Got VMs from store:", allVMs.length);
+
+  if (allVMs.length > 0) {
+    const sorted = getSortedVMsByRecency(allVMs);
+    _sortedVMs = sorted;
+    console.log(
+      "[updateSortedVMs] Set _sortedVMs to length:",
+      _sortedVMs.length
+    );
+  } else {
+    console.log("[updateSortedVMs] No VMs to sort");
+  }
+}
+
 /* ── public actions that mutate state ── */
 // select functions
 
@@ -162,23 +236,29 @@ export function triggerRefresh() {
 export async function selectVM(vmPrm) {
   if (!vmPrm) return;
 
+  // Check if stores are ready
+  const vmStore = getVMStore();
+  const commandStore = getCommandStore();
+
+  if (!vmStore || !commandStore) {
+    console.warn("[selectVM] Stores not ready yet, skipping selection");
+    return;
+  }
+
   let vm = vmPrm;
   if (!validateVMForm(vmPrm, "selectVM").isValid) {
-    vm = await getVMStore().resolveVM(
-      vmPrm.id || vmPrm.alias || vmPrm,
-      "selectVM"
-    );
+    vm = await vmStore.resolveVM(vmPrm.id || vmPrm.alias || vmPrm, "selectVM");
   }
 
   _setSelectedVMId(vm.id, vm, "selectVM");
   setSelectedVM(vm, "selectVM end");
 
-  // Update recent VM order
+  // Update recent VMs list
   if (_selectedVM) {
-    updateRecentVMOrder(_selectedVM.alias);
+    updateRecentVMs(_selectedVM.alias);
   }
 
-  _selectedVMCommands = await getCommandStore().getCommandsForVM(
+  _selectedVMCommands = await commandStore.getCommandsForVM(
     _selectedVMId,
     "selectVM"
   );
@@ -188,7 +268,12 @@ export async function selectVM(vmPrm) {
 async function _setSelectedVMId(id, vm = null, caller = "unknown") {
   if (!id && !vm) return;
   if (!id && vm) {
-    id = await getVMStore().resolveVM(vm.id || vm.alias, "_setSelectedVMId");
+    const vmStore = getVMStore();
+    if (!vmStore) {
+      console.warn("[_setSelectedVMId] VM store not ready");
+      return;
+    }
+    id = await vmStore.resolveVM(vm.id || vm.alias, "_setSelectedVMId");
     if (!id) return;
   }
 
@@ -206,8 +291,19 @@ function _setSelectedVMCommands(commands) {
   _selectedVMCommands = commands;
 }
 
+// ---
+
+// ---
+
 export async function refresh() {
-  selectVM(getSelectedVM());
+  const selectedVM = getSelectedVM();
+  if (selectedVM && getVMStore() && getCommandStore()) {
+    await selectVM(selectedVM);
+  } else {
+    console.warn(
+      "[refresh] Cannot refresh - either no selected VM or stores not ready"
+    );
+  }
 }
 // ---
 
@@ -275,17 +371,47 @@ export function attachStores({
   jobStoreRef,
   logStoreRef,
 }) {
-  if (_storesAttached) return;
+  if (_storesAttached) {
+    console.log("[attachStores] Already attached, skipping");
+    return;
+  }
 
+  console.log("[attachStores] Attaching stores...");
   _vmStore = vmStoreRef;
   _commandStore = commandStoreRef;
   _jobStore = jobStoreRef;
   _logStore = logStoreRef;
 
-  // Initialize recent VM order
-  initRecentVMOrder();
+  console.log("[attachStores] VM Store attached:", !!_vmStore);
+  if (_vmStore) {
+    console.log(
+      "[attachStores] VM Store VMs count:",
+      _vmStore.getVMs()?.length || 0
+    );
+  }
+
+  // Initialize recent VMs
+  initRecentVMs();
 
   _storesAttached = true;
+  console.log("[attachStores] Stores attached successfully");
+
+  // Immediately try to update sorted VMs if VMs are available
+  if (_vmStore) {
+    const vms = _vmStore.getVMs() || [];
+    if (vms.length > 0) {
+      console.log(
+        "[attachStores] Immediately updating sorted VMs with",
+        vms.length,
+        "VMs"
+      );
+      updateSortedVMs();
+    } else {
+      console.log(
+        "[attachStores] No VMs available yet - will update when VMs are loaded"
+      );
+    }
+  }
 }
 
 /* ── derive the rest whenever id changes ── */
@@ -315,48 +441,94 @@ $effect.root(() => {
       });
     }
   });
+
+  // Keep sorted VMs updated when VMs or recent VMs change
+  $effect(() => {
+    if (!_vmStore) {
+      console.log("[UI State] Effect: _vmStore not available");
+      return;
+    }
+
+    const vms = _vmStore.getVMs() || [];
+    // Access _recentVMs to make this effect reactive to changes
+    const recentVMs = _recentVMs;
+
+    console.log(
+      "[UI State] Effect triggered: VMs count:",
+      vms.length,
+      "Recent VMs:",
+      recentVMs.length
+    );
+
+    if (vms.length > 0) {
+      updateSortedVMs();
+      console.log("[UI State] Updated _sortedVMs:", _sortedVMs.length, "VMs");
+    } else {
+      console.log("[UI State] No VMs available to sort");
+    }
+  });
 });
 
 // --------------------- helper ------------------------
 // recent VMs
 
-// New function to update recent order reactively
-function updateRecentVMOrder(vmAlias) {
-  if (!vmAlias) return;
+// Update recent VMs list - ensures vmAlias is a string, not an array
+function updateRecentVMs(vmAlias) {
+  if (!vmAlias || typeof vmAlias !== "string") return;
 
   // Remove if already exists
-  _recentVMOrder = _recentVMOrder.filter((alias) => alias !== vmAlias);
+  _recentVMs = _recentVMs.filter((alias) => alias !== vmAlias);
 
   // Add to front
-  _recentVMOrder = [vmAlias, ..._recentVMOrder];
+  _recentVMs = [vmAlias, ..._recentVMs];
 
-  // Also update localStorage for persistence
-  localStorage.setItem("recentVMs", JSON.stringify(_recentVMOrder));
+  // Keep only last 10 recent VMs
+  if (_recentVMs.length > 10) {
+    _recentVMs = _recentVMs.slice(0, 10);
+  }
+
+  // Persist to localStorage
+  localStorage.setItem("recentVMs", JSON.stringify(_recentVMs));
 }
 
-// Initialize recent order from localStorage
-function initRecentVMOrder() {
+// Initialize recent VMs from localStorage
+function initRecentVMs() {
   try {
     const json = localStorage.getItem("recentVMs");
-    _recentVMOrder = json ? JSON.parse(json) : [];
+    if (json) {
+      const parsed = JSON.parse(json);
+      // Ensure we have a flat array of strings
+      if (Array.isArray(parsed)) {
+        _recentVMs = parsed.filter((item) => typeof item === "string");
+      } else {
+        _recentVMs = [];
+      }
+    } else {
+      _recentVMs = [];
+    }
   } catch (e) {
-    _recentVMOrder = [];
+    _recentVMs = [];
+    localStorage.removeItem("recentVMs"); // Clean corrupted data
   }
 }
 
-export function getRecentVMs(vms) {
+export function getSortedVMsByRecency(vms) {
   if (!Array.isArray(vms)) return [];
 
-  const recentOrder = _recentVMOrder;
+  // If no recent VMs, just return all VMs
+  if (!_recentVMs || _recentVMs.length === 0) {
+    return vms;
+  }
+
   const vmMap = new Map(vms.map((vm) => [vm.alias, vm]));
 
   // Get VMs in recent order
-  const recentVMs = recentOrder
+  const recentVMs = _recentVMs
     .map((alias) => vmMap.get(alias))
     .filter((vm) => vm !== undefined);
 
   // Get remaining VMs not in recent list
-  const recentSet = new Set(recentOrder);
+  const recentSet = new Set(_recentVMs);
   const otherVMs = vms.filter((vm) => !recentSet.has(vm.alias));
 
   return [...recentVMs, ...otherVMs];
@@ -364,7 +536,7 @@ export function getRecentVMs(vms) {
 
 export async function initializedUIState(vms) {
   return new Promise(async (resolve) => {
-    initRecentVMOrder();
+    initRecentVMs();
 
     // Try to restore the previously selected VM
     const savedVM = getSelectedVM();
@@ -388,8 +560,8 @@ export async function initializedUIState(vms) {
 
     // If no saved VM or saved VM not found, use first recent VM
     if (!vmToSelect) {
-      const recentVMs = getRecentVMs(vms);
-      vmToSelect = recentVMs[0];
+      const sortedVMs = getSortedVMsByRecency(vms);
+      vmToSelect = sortedVMs[0];
       console.log(
         `🔄 [UI State] Selecting first available VM: ${
           vmToSelect?.alias || "none"
@@ -401,6 +573,9 @@ export async function initializedUIState(vms) {
       await selectVM(vmToSelect);
     }
 
+    await refresh();
+
+    _isUIInitialized = true; // Mark UI as initialized
     resolve();
   });
 }

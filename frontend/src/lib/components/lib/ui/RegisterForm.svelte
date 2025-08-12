@@ -3,6 +3,7 @@
   import * as Card from "$lib/components/lib/ui/card/index.js";
   import { Label } from "$lib/components/lib/ui/label/index.js";
   import { getService } from "$lib/core/ServiceContainer.js";
+  import { toastActions } from "$lib/stores/toast.store.svelte.js";
   const authService = getService("authService");
 
   let { onSuccess = () => {} } = $props();
@@ -39,10 +40,12 @@
     try {
       const result = await authService.register(userData);
       console.log("✅ [RegisterForm] Registration successful:", result);
+      toastActions.auth.registerSuccess(formData.email);
       onSuccess();
     } catch (err) {
       console.error("❌ [RegisterForm] Registration failed:", err);
       error = err.message || 'Registration failed';
+      toastActions.auth.registerError(err);
     } finally {
       loading = false;
     }

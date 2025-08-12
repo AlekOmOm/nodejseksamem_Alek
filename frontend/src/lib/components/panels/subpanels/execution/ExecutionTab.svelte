@@ -8,16 +8,14 @@
   // Direct state access
   const selectedVM = $derived(getSelectedVM());
   const commands = $derived(getSelectedVMCommands());
-  let prevSelectedVM = null;
   let vmCommands = $derived(getSelectedVMCommands());
 
   // Local UI state
   let showAddForm = $state(false);
 
   $effect(() => {
-    if (selectedVM !== prevSelectedVM) {
-      prevSelectedVM = selectedVM;
-  vmCommands = getSelectedVMCommands();
+    if (selectedVM) {
+      vmCommands = getSelectedVMCommands();
     }
   });
 
