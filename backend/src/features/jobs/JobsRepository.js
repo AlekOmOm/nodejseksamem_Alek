@@ -6,6 +6,25 @@ export class JobsRepository {
     this.db = dbSingleton;
   }
 
+  /**
+   * Transform database row to camelCase format
+   */
+  _transformJob(row) {
+    if (!row) return null;
+    
+    return {
+      id: row.id,
+      vmId: row.vm_id,
+      command: row.command,
+      type: row.type,
+      status: row.status,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+      exitCode: row.exit_code,
+      cachedAt: row.cached_at,
+    };
+  }
+
   async getJobs(limit = 10) {
     // 1. Fetch from Postgres cache first
     const cappedLimit = Math.min(parseInt(limit, 10) || 10, 100);
@@ -13,11 +32,8 @@ export class JobsRepository {
       "SELECT * FROM jobs ORDER BY started_at DESC LIMIT $1",
       [cappedLimit]
     );
-    if (cachedJobs.rows.length > 0) {
-      return cachedJobs.rows;
-    }
-
-    return cachedJobs.rows;
+    
+    return cachedJobs.rows.map(row => this._transformJob(row));
   }
 
   async getJob(jobId) {
@@ -26,7 +42,7 @@ export class JobsRepository {
       jobId,
     ]);
     if (cachedJob.rows.length > 0) {
-      return cachedJob.rows[0];
+      return this._transformJob(cachedJob.rows[0]);
     }
     return null;
   }
@@ -45,7 +61,7 @@ export class JobsRepository {
        RETURNING *`,
       [id, vm_id, command, status, started_at]
     );
-    return result.rows[0];
+    return this._transformJob(result.rows[0]);
   }
 
   async updateJob(jobId, updates) {
@@ -62,7 +78,7 @@ export class JobsRepository {
       ", "
     )}, cached_at = NOW() WHERE id = $${idx} RETURNING *`;
     const result = await this.db.query(query, values);
-    return result.rows[0];
+    return this._transformJob(result.rows[0]);
   }
 
   async getJobLogs(jobId, limit = 1000) {
@@ -77,7 +93,20 @@ export class JobsRepository {
       "SELECT * FROM jobs WHERE vm_id = $1 ORDER BY started_at DESC LIMIT $2",
       [vmId, cappedLimit]
     );
-    return result.rows;
+    return result.rows.map(row => this._transformJob(row));
+  }
+
+  async deleteJob(jobId) {
+    const result = await this.db.query(
+      "DELETE FROM jobs WHERE id = $1 RETURNING *",
+      [jobId]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error(`Job with ID '${jobId}' not found`);
+    }
+    
+    return this._transformJob(result.rows[0]);
   }
 
   async cacheJobs(jobs) {

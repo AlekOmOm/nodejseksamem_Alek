@@ -1,5 +1,6 @@
 import express from "express";
 import { jobsService } from "./JobsService.js";
+import { sendSuccess, sendError, sendCreated } from "../../shared/utils/responseHelpers.js";
 
 export function createJobsRouter() {
   const router = express.Router({ mergeParams: true });
@@ -48,20 +49,32 @@ export function createJobsRouter() {
   router.put("/:jobId", async (req, res) => {
     try {
       const job = await service.updateJob(req.params.jobId, req.body);
-      res.json(job);
+      sendSuccess(res, job);
     } catch (error) {
       console.error("Error updating job:", error);
-      res.status(500).json({ error: "Failed to update job" });
+      const status = error.message.includes("not found") ? 404 : 500;
+      sendError(res, "Failed to update job", status);
+    }
+  });
+
+  router.delete("/:jobId", async (req, res) => {
+    try {
+      await service.deleteJob(req.params.jobId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      const status = error.message.includes("not found") ? 404 : 500;
+      sendError(res, "Failed to delete job", status);
     }
   });
 
   router.get("/:jobId/logs", async (req, res) => {
     try {
       const lines = await service.getJobLogs(req.params.jobId, req.query.limit);
-      res.json(lines);
+      sendSuccess(res, lines);
     } catch (error) {
       console.error("Error fetching job logs:", error);
-      res.status(500).json({ error: "Failed to fetch job logs" });
+      sendError(res, "Failed to fetch job logs", 500);
     }
   });
 

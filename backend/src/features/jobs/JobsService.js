@@ -28,6 +28,10 @@ class JobsService {
   async getJobsForVM(vmId, limit) {
     return await this.repo.getJobsForVM(vmId, limit);
   }
+
+  async deleteJob(jobId) {
+    return await this.repo.deleteJob(jobId);
+  }
 }
 
 export const jobsService = new JobsService(new JobsRepository());
