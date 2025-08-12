@@ -26,30 +26,65 @@ export function getLogStore() {
   return _logStore;
 }
 
+// Add safe initialization that doesn't require services to be ready
+let safeInitPromise = null;
+
+export function initStoresSafe() {
+  if (safeInitPromise) return safeInitPromise;
+
+  safeInitPromise = (async () => {
+    try {
+      // Only initialize if services are available
+      if (typeof window !== "undefined") {
+        // Try to initialize, but don't fail if services aren't ready
+        try {
+          await initStores();
+        } catch (error) {
+          console.log(
+            "🔄 [Stores] Services not ready yet, stores will initialize later"
+          );
+        }
+      }
+    } catch (error) {
+      console.error("❌ [Stores] Safe initialization failed:", error);
+    }
+  })();
+
+  return safeInitPromise;
+}
+
 let initPromise = null;
 let dataInitPromise = null;
 
 export function initStores() {
   if (initPromise) return initPromise;
   initPromise = (async () => {
-    const vmService = getService("vmService");
-    const commandService = getService("commandService");
-    const commandExecutor = getService("commandExecutor");
-    const jobService = getService("jobService");
-    const logService = getService("logService");
+    // Check if services are available before trying to use them
+    try {
+      const vmService = getService("vmService");
+      const commandService = getService("commandService");
+      const commandExecutor = getService("commandExecutor");
+      const jobService = getService("jobService");
+      const logService = getService("logService");
 
-    _vmStore = createVMStore({ vmService });
-    _commandStore = createCommandStore({
-      commandService,
-      vmService,
-      commandExecutor,
-    });
-    _jobStore = createJobStore({
-      jobService,
-      vmStore: _vmStore,
-      commandStore: _commandStore,
-    });
-    _logStore = createLogStore({ logService });
+      _vmStore = createVMStore({ vmService });
+      _commandStore = createCommandStore({
+        commandService,
+        vmService,
+        commandExecutor,
+      });
+      _jobStore = createJobStore({
+        jobService,
+        vmStore: _vmStore,
+        commandStore: _commandStore,
+      });
+      _logStore = createLogStore({ logService });
+    } catch (error) {
+      console.log("🔄 [Stores] Services not ready, will retry later");
+      // Reset promise so it can be retried
+      initPromise = null;
+      throw error;
+    }
   })();
   return initPromise;
 }
@@ -126,5 +161,5 @@ export async function initializeStoresData() {
   return dataInitPromise;
 }
 
-/* auto-initialise in the browser */
-if (typeof window !== "undefined") initStores();
+// Remove the auto-initialization completely
+// if (typeof window !== "undefined") initStoresSafe();

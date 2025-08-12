@@ -7,7 +7,7 @@
 
   let activeTab = $state('execute');
 
-  const currentJob = $derived(getJobStore().currentJob);
+  const currentJob = $derived(getJobStore()?.currentJob || null);
 
 </script>
 

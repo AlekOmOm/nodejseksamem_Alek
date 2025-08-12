@@ -6,7 +6,6 @@
 <script>
 import { Card, CardContent } from '$lib/components/lib/ui/card';
 import { Clock } from '@lucide/svelte';
-import { getJobStore } from '$lib/state/stores.state.svelte.js';
 import { getSelectedVM, getSelectedVMJobs } from '$lib/state/ui.state.svelte.js';
 import Job from '$lib/features/job/Job.svelte';
 
