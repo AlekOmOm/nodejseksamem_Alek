@@ -36,6 +36,7 @@ export function initStores() {
     const commandService = getService("commandService");
     const commandExecutor = getService("commandExecutor");
     const jobService = getService("jobService");
+    const logService = getService("logService");
 
     _vmStore = createVMStore({ vmService });
     _commandStore = createCommandStore({
@@ -43,8 +44,12 @@ export function initStores() {
       vmService,
       commandExecutor,
     });
-    _jobStore = createJobStore({ jobService, vmStore: _vmStore });
-    _logStore = createLogStore();
+    _jobStore = createJobStore({
+      jobService,
+      vmStore: _vmStore,
+      commandStore: _commandStore,
+    });
+    _logStore = createLogStore({ logService });
   })();
   return initPromise;
 }
@@ -72,19 +77,17 @@ export async function initializeStoresData() {
     // 1. Load VMs first with error handling
     if (_vmStore) {
       loadPromises.push(
-        _vmStore
-          .loadVMs()
-          .catch((err) => {
-            console.error("Failed to load VMs:", err);
-            return [];
-          })
+        _vmStore.loadVMs().catch((err) => {
+          console.error("Failed to load VMs:", err);
+          return [];
+        })
       );
     }
 
     if (_jobStore) {
       loadPromises.push(
         _jobStore
-          .loadJobs()
+          .getJobs()
           .catch((err) => console.error("Failed to load jobs:", err))
       );
     }

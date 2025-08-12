@@ -40,6 +40,7 @@ let _selectedVMJobs = $state([]);
 let _selectedTemplateCmd = $state(null);
 let _logLines = $state([]);
 let _currentJob = $state(null);
+let _latestJob = $state(null);
 
 // vm being edited
 let _editingVM = $state(null);
@@ -87,6 +88,24 @@ function setSelectedVM(vm, caller = "unknown") {
     localStorage.removeItem("lastSelectedVM");
     console.log("🔄 [UI State] Selected VM cleared from localStorage");
   }
+
+  // Load jobs when component mounts or VM changes
+  getJobStore()
+    .getJobs(_selectedVMId)
+    .then((jobs) => {
+      _setSelectedVMJobs(jobs || []);
+    });
+}
+// ---
+// refresh jobs (used for historyTab refreshing)
+export function refreshJobs() {
+  _setSelectedVMJobs(
+    getJobStore()
+      .getJobs(_selectedVMId)
+      .then((jobs) => {
+        _setSelectedVMJobs(jobs || []);
+      })
+  );
 }
 
 // ----
@@ -170,7 +189,9 @@ async function _setSelectedVMId(id, vm = null, caller = "unknown") {
   _selectedVMId = id;
 }
 function _setSelectedVMJobs(jobs) {
-  _selectedVMJobs = jobs;
+  console.log("[UI State] _setSelectedVMJobs:", jobs?.length || 0);
+  _selectedVMJobs = jobs || [];
+  console.log("[UI State] _setSelectedVMJobs set:", _selectedVMJobs.length);
 }
 function _setSelectedVMCommands(commands) {
   _selectedVMCommands = commands;
@@ -275,8 +296,9 @@ $effect.root(() => {
         _selectedVMCommands = _commandStore.getCommandsForVM(_selectedVMId);
       });
 
-      _jobStore.loadVMJobs?.(_selectedVMId).then(() => {
-        _selectedVMJobs = _jobStore.getVMJobs(_selectedVMId);
+      _jobStore.getJobs?.(_selectedVMId).then((jobs) => {
+        _selectedVMJobs = jobs || [];
+        // console.log("[UI State] Reactive update selectedVMJobs:", _selectedVMJobs.length, "jobs");
       });
     }
   });
