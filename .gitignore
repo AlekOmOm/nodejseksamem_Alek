@@ -11,3 +11,4 @@ serverless/node_modules/
 serverless/node_modules/*
 backend/node_modules/*
 .vscode/
+frontend/package-lock.json

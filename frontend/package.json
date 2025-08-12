@@ -27,6 +27,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.13",
     "socket.io-client": "^4.7.5",
     "svelte-sonner": "^1.0.5",
     "tailwind-merge": "^3.3.1",
