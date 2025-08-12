@@ -46,7 +46,7 @@
 
 </script>
 
-<div class="h-full overflow-y-auto p-4 space-y-4">
+<div class="h-full overflow-y-auto p-4">
   {#if !selectedVM}
     <div class="text-center text-muted-foreground py-8">
       Select a VM to view commands
@@ -61,7 +61,6 @@
       </div>
     </div>
   {:else}
-
     <div class="space-y-3">
       <h3 class="font-semibold">Commands for {selectedVM.name}</h3>
       <Grid>
@@ -69,7 +68,6 @@
           <Command {command} />
         {/each}
       </Grid>
-
     </div>
   {/if}
 </div>
