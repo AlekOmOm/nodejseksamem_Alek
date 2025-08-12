@@ -124,7 +124,7 @@
           <Edit class="w-3 h-3" />
         </Button>
         <Button variant="ghost" size="sm" onclick={handleManageCommands}>
-          <Settings class="w-3 h-3" />
+          <!-- <Settings class="w-3 h-3" /> -->
         </Button>
       </div>
     </div>
