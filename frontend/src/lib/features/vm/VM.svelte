@@ -13,7 +13,7 @@
   import { Server, Edit, Settings, CheckCircle2 } from '@lucide/svelte';
   
   // state - global state access
-  import { getSelectedVMId, selectVM } from '$lib/state/ui.state.svelte.js';
+  import { getSelectedVMId, getSelectedVM, selectVM } from '$lib/state/ui.state.svelte.js';
   import { getCommandStore } from '$lib/state/stores.state.svelte.js';
   import { startEdit } from '$lib/state/ui.state.svelte.js';
   
@@ -30,6 +30,7 @@
   }
  
   // State access
+  const selectedVM = $derived(getSelectedVM());
   const selectedVMId = $derived(getSelectedVMId());
   const commandStore = $derived(getCommandStore());
   
@@ -43,10 +44,8 @@
   let showCommandsModal = $state(false);
 
   // Computed
-  const isSelected = $derived(() => {
-    const currentVMId = $state.snapshot(selectedVMId);
-    return vm.id === currentVMId;
-  });
+  let isSelected = $derived(vm.id === selectedVMId);
+
   const environmentVariant = $derived(
     vm.environment === 'production' ? 'destructive' : 
     vm.environment === 'staging' ? 'secondary' : 'default'
@@ -69,31 +68,49 @@
     e.stopPropagation();
     showCommandsModal = true;
   }
+
+  async function handleDelete() {
+    try {
+      await vmStore.deleteVM(vm.id);
+      toastActions.vm.deleted(vm.name);
+    } catch (error) {
+      toastActions.vm.error('delete', error);
+    }
+  }
 </script>
 
 <div onclick={handleVMSelect} onkeydown={e => (e.key === 'Enter' || e.key === ' ') && handleVMSelect()} role="button" tabindex="0" class="cursor-pointer">
-  <Card class="transition-all duration-200 {isSelected ? 'ring-2 ring-primary border-primary' : 'hover:shadow-md'} {!sizeSet ? '' : `p-${1}`}">
+  <Card class="transition-all duration-200  {!sizeSet ? '' : `p-${1}`} {isSelected ? 'ring-2 ring-primary border-primary' : 'hover:shadow-md'}">
   <CardHeader class="pb-2">
     <div class="flex items-start justify-between">
-      <div class="flex items-center gap-2">
-        <div class="p-1 bg-primary/10 rounded-lg">
-          <Server class="w-4 h-4 text-primary" />
+      <div class="flex flex-col gap-2 pt-2">
+        <div class="flex items-center gap-2">
+          <div class="p-1 bg-primary/10 rounded-lg flex items-center justify-center">
+            <Server class="w-4 h-4 text-primary" />
+          </div>
+          <div class="flex items-center gap-1">
+            <Badge variant={environmentVariant} class="text-xs">
+              {environmentLabel}
+            </Badge>
+          </div>
+          <div class="ml-auto">
+            {#if isSelected}
+              <CheckCircle2 class="w-4 h-4 text-green-600" />
+            {/if}
+          </div>
         </div>
         <div>
           <CardTitle class="text-base flex items-center gap-2">
             {vm.name}
-            {#if isSelected}
-              <CheckCircle2 class="w-4 h-4 text-green-600" />
-            {/if}
           </CardTitle>
           <p class="text-xs text-muted-foreground mt-1 break-all">
-            {vm.user}@{vm.host}
+            <span>{vm.user}</span>
+          </p>
+          <p class="text-xs text-muted-foreground mt-1 break-all">
+            <span>@{vm.host}</span> 
           </p>
         </div>
       </div>
-      <Badge variant={environmentVariant} class="text-xs">
-        {environmentLabel}
-      </Badge>
     </div>
   </CardHeader>
 
