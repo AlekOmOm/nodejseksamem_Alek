@@ -3,7 +3,7 @@
 
   let {
     class: className = undefined,
-    value = "",
+    value = $bindable(""),
     placeholder = "",
     disabled = false,
     readonly = false,
