@@ -3,8 +3,8 @@ import { Button } from '$lib/components/lib/ui/button';
 import { Input } from '$lib/components/lib/ui/input';
 import { Label } from '$lib/components/lib/ui/label';
 import { Textarea } from '$lib/components/lib/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/lib/ui/card';
-import { X, Terminal, Loader2 } from '@lucide/svelte';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/lib/ui/dialog';
+import { Loader2 } from '@lucide/svelte';
 
 // state - centralized command UI state
 import { 
@@ -13,12 +13,14 @@ import {
   isEditingCommand 
 } from '$lib/state/ui.command.state.svelte.js';
 
+// state - command store
+import { getCommandStore } from '$lib/state/stores.state.svelte.js';
+
 // Props - standardized interface
-let { command, onSave  } = $props();
+let { command, isOpen = $bindable(false) } = $props();
 
 // Centralized state access
-const editingCommandId = $derived(getEditingCommandId());
-const isOpen = $derived(isEditingCommand(command.id));
+const commandStore = $derived(getCommandStore());
 
 // Form state
 let formData = $state({
@@ -55,37 +57,34 @@ async function handleSubmit() {
   error = '';
   
   try {
-    await onSave(formData);
+    await commandStore.updateCommand(command.id, formData);
     stopEditCommand();
   } catch (err) {
     console.error('Failed to update command:', err);
     error = err.message || 'Failed to update command';
   } finally {
     loading = false;
+    isOpen = false;
   }
 }
 
 function handleCancel() {
   stopEditCommand();
+  isOpen = false;
 }
 </script>
 
-{#if isOpen}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <Card class="w-full max-w-2xl mx-4">
-      <CardHeader>
-        <div class="flex items-center justify-between">
-          <CardTitle class="flex items-center gap-2">
-            <Terminal class="w-5 h-5" />
-            Edit Command
-          </CardTitle>
-          <Button variant="ghost" size="sm" onclick={handleCancel}>
-            <X class="w-4 h-4" />
-          </Button>
-        </div>
-      </CardHeader>
+<Dialog bind:open={isOpen} class="max-w-[90vw]">
+  <DialogContent class="sm:max-w-4xl max-h-[80vh] max-w-[90vw] overflow-y-auto">
+    <DialogHeader class="border-b border-border pb-4">
+      <DialogTitle>
+        Edit Command
+        <span class="text-sm text-muted-foreground ml-2">
+          {command?.name}
+        </span>
+      </DialogTitle>
+    </DialogHeader>
 
-      <CardContent class="space-y-4">
         <div class="space-y-2">
           <Label for="name">Command Name *</Label>
           <Input
@@ -158,7 +157,5 @@ function handleCancel() {
             Update Command
           </Button>
         </div>
-      </CardContent>
-    </Card>
-  </div>
-{/if}
+  </DialogContent>
+</Dialog>

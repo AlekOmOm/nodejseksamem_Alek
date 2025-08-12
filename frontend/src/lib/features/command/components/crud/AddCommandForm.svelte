@@ -126,7 +126,7 @@
 
 <Dialog bind:open={isOpen} class="overflow-y-auto max-w-[90vw]" >
   <DialogContent class="sm:max-w-4xl max-h-[80vh] max-w-[90vw]">
-    <DialogHeader>
+    <DialogHeader class="border-b border-border pb-4">
       <DialogTitle>
         Add New Command
         <span class="text-sm text-muted-foreground ml-2">
