@@ -28,7 +28,7 @@
     background: var(--terminal-background);
     color: var(--terminal-text);
     font-family: monospace;
-    font-size: 16px;
+    font-size: 14px;
     overflow-y: auto;
     padding-top: 1vh;
     padding-left: 2vh;
