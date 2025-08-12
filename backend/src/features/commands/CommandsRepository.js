@@ -4,7 +4,7 @@ export class CommandsRepository {
   BASE_ENDPOINT = "/api/commands";
 
   constructor() {
-    this.request = serverlessAPI.request;
+    this.api = serverlessAPI;
   }
 
   // ── /api/commands/ ------------------------------------
@@ -15,7 +15,7 @@ export class CommandsRepository {
    * @returns {Promise<Object>} Command object
    */
   async getCommand(id) {
-    return await this.request(`${this.BASE_ENDPOINT}/${id}`);
+    return await this.api.request(`${this.BASE_ENDPOINT}/${id}`);
   }
 
   /**
@@ -25,7 +25,7 @@ export class CommandsRepository {
    * @returns {Promise<Object>} Updated command
    */
   async updateCommand(id, updates) {
-    return await this.request(`${this.BASE_ENDPOINT}/${id}`, {
+    return await this.api.request(`${this.BASE_ENDPOINT}/${id}`, {
       method: "PUT",
       body: JSON.stringify(updates),
     });
@@ -37,7 +37,7 @@ export class CommandsRepository {
    * @returns {Promise<void>}
    */
   async deleteCommand(id) {
-    return await this.request(`${this.BASE_ENDPOINT}/${id}`, {
+    return await this.api.request(`${this.BASE_ENDPOINT}/${id}`, {
       method: "DELETE",
     });
   }
