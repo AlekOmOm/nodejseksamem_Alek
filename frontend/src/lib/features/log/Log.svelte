@@ -1,4 +1,8 @@
 <script>
+  import { Button } from '$lib/components/lib/ui/button';
+  import { Copy } from '@lucide/svelte';
+  import { copyToClipboard } from '$lib/utils.js';
+
   let { logLines = [], className = '' } = $props();
   let logContainer;
 

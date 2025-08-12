@@ -10,7 +10,7 @@
   import { Badge } from '$lib/components/lib/ui/badge';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/lib/ui/card';
   import { Server, Copy, Eye } from '@lucide/svelte';
-  import { toast } from 'svelte-sonner';
+  import { copyToClipboard } from '$lib/utils.js';
 
   let { 
     vm = null, 
@@ -28,25 +28,20 @@
     ${vm.description ? `# ${vm.description}` : ''}`;
   });
 
-  async function copyToClipboard(text, label) {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied to clipboard!`);
-    } catch (error) {
-      toast.error(`Failed to copy ${label.toLowerCase()}`);
-    }
-  }
-
   function copyFullConfig() {
-    copyToClipboard(sshConfig, 'SSH Config');
+    copyToClipboard(sshConfig(), 'SSH Config');
   }
 
+
+  // details
+  function copyUser() {
+    copyToClipboard(vm.user, 'User');
+  }
   function copyHost() {
     copyToClipboard(vm.host, 'Host');
   }
-
-  function copyUser() {
-    copyToClipboard(vm.user, 'User');
+  function copyPort() {
+    copyToClipboard(vm.port || 22, 'Port');
   }
 </script>
 
@@ -84,7 +79,8 @@
             <CardTitle class="text-base">Connection Details</CardTitle>
           </CardHeader>
           <CardContent class="space-y-3">
-            <div class="grid grid-cols-2 gap-4">
+          <!-- details -->
+            <div class="grid grid-rows-2 gap-4">
               <div>
                 <label class="text-xs font-medium text-muted-foreground">HOST</label>
                 <div class="flex items-center gap-2 mt-1">
@@ -98,16 +94,19 @@
                 <label class="text-xs font-medium text-muted-foreground">PORT</label>
                 <div class="flex items-center gap-2 mt-1">
                   <code class="text-sm bg-muted px-2 py-1 rounded flex-1">{vm.port || 22}</code>
+                  <Button variant="ghost" size="sm" onclick={copyPort}>
+                    <Copy class="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
-            </div>
-            <div>
-              <label class="text-xs font-medium text-muted-foreground">USER</label>
-              <div class="flex items-center gap-2 mt-1">
-                <code class="text-sm bg-muted px-2 py-1 rounded flex-1">{vm.user}</code>
-                <Button variant="ghost" size="sm" onclick={copyUser}>
-                  <Copy class="w-3 h-3" />
-                </Button>
+              <div>
+                <label class="text-xs font-medium text-muted-foreground">USER</label>
+                <div class="flex items-center gap-2 mt-1">
+                  <code class="text-sm bg-muted px-2 py-1 rounded flex-1">{vm.user}</code>
+                  <Button variant="ghost" size="sm" onclick={copyUser}>
+                    <Copy class="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -134,14 +133,14 @@
           <CardHeader class="pb-3">
             <div class="flex items-center justify-between">
               <CardTitle class="text-base">SSH Config</CardTitle>
-              <Button variant="outline" size="sm" onclick={copyFullConfig}>
+              <Button variant="outline" size="sm" onclick={() => copyFullConfig()}>
                 <Copy class="w-3 h-3 mr-2" />
                 Copy Config
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <pre class="text-xs bg-muted p-3 rounded overflow-x-auto whitespace-pre-wrap">{sshConfig}</pre>
+            <pre class="text-xs bg-muted p-3 rounded overflow-x-auto whitespace-pre-wrap">{sshConfig()}</pre>
           </CardContent>
         </Card>
       </div>
