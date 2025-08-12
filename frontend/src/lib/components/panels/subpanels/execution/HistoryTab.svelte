@@ -7,24 +7,15 @@
 import { Card, CardContent } from '$lib/components/lib/ui/card';
 import { Clock } from '@lucide/svelte';
 import { getJobStore } from '$lib/state/stores.state.svelte.js';
-import { getSelectedVM } from '$lib/state/ui.state.svelte.js';
+import { getSelectedVM, getSelectedVMJobs } from '$lib/state/ui.state.svelte.js';
 import Job from '$lib/features/job/Job.svelte';
 
-const jobStore = $derived(getJobStore());
 const selectedVM = $derived(getSelectedVM());
-const jobs = $derived(jobStore?.jobs || []);
+const jobs = $derived(getSelectedVMJobs());
 
-// Load jobs when component mounts or VM changes
-$effect(() => {
-  if (jobStore && selectedVM?.id) {
-    jobStore.loadVMJobs(selectedVM.id);
-  } else if (jobStore) {
-    jobStore.loadJobs();
-  }
-});
 </script>
 
-<div class="p-4 space-y-4">
+<div class="p-4 space-y-4 h-full w-full overflow-y-auto">
   {#if jobs.length === 0}
     <Card>
       <CardContent class="p-8 text-center text-muted-foreground">
@@ -37,7 +28,7 @@ $effect(() => {
       </CardContent>
     </Card>
   {:else}
-    <div class="space-y-3">
+    <div class="space-y-3 w-full">
       <div class="text-sm text-muted-foreground">
         {jobs.length} job{jobs.length === 1 ? '' : 's'}
         {#if selectedVM}
@@ -45,7 +36,7 @@ $effect(() => {
         {/if}
       </div>
       {#each jobs as job (job.id)}
-        <Job jobId={job.id} />
+        <Job {job} />
       {/each}
     </div>
   {/if}
