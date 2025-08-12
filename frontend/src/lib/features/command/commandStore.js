@@ -99,6 +99,8 @@ export function createCommandStore(dependencies) {
     async createCommand(vmId, data) {
       if (!vmId) throw new Error("VM id required");
 
+      console.log("Creating command:", data.name, data.cmd);
+
       try {
         const vm = await getVMStore().getVMById(vmId);
         const newCommand = await commandService.createCommand(vm.id, data);
@@ -115,14 +117,19 @@ export function createCommandStore(dependencies) {
             },
             commandCounts: {
               ...s.commandCounts,
-              [vmId]: newCmds.length, // Update count
+              [vmId]: newCmds.length,
             },
           };
         });
         return newCommand;
       } catch (error) {
         console.error("Failed to create command:", error);
-        throw error;
+        
+        // Re-throw with preserved error message for toast handling
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+        const enhancedError = new Error(errorMessage);
+        enhancedError.status = error.response?.status;
+        throw enhancedError;
       }
     },
 
